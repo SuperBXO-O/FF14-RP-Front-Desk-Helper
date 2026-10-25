@@ -42,11 +42,64 @@ This project is not affiliated with or endorsed by Square Enix, Final Fantasy XI
 
 ## Deployment
 
-1. Download or clone this repository.
-2. Upload `public/index.html` to any static web host.
-3. Optional: install `INPA Bridge` separately and connect the page to the local plugin.
+Use Browsingway to display the front desk page inside the game. Install INPA Bridge as well if you need target selection, private messages, item binding, automated trading, or shared data.
 
-No build step or third-party npm packages are required to host the app.
+### Install the in-game components
+
+1. Open `/xlplugins` and install **Browsingway**.
+2. Install **INPA Bridge**. If it is not listed, open **Experimental → Custom Plugin Repositories** in `/xlsettings` and add:
+
+```text
+https://raw.githubusercontent.com/SuperBXO-O/INPABridge/main/repo.json
+```
+
+3. Return to `/xlplugins` and confirm that both Browsingway and INPA Bridge are enabled.
+
+Browsingway displays the web page inside the game. INPA Bridge provides target reading, inventory access, trading, shared data, and the local page service.
+
+### Create a Browsingway inlay
+
+Open Browsingway with `/bw` or from the Dalamud plugin settings, then create a new inlay:
+
+- **Name**: `ff14rpfrontdeskhelper`
+- **URL**: `http://127.0.0.1:18500`
+- **Zoom**: start with `100%`
+- **Opacity**: adjust as needed; `95%` is a common starting point
+- **Framerate**: `60 FPS` is recommended
+
+The URL is the local page address provided by INPA Bridge. It is not the GitHub project URL or the INPA Bridge repository URL.
+
+After entering the game, resize and position the inlay. Once it is displayed correctly, lock the window with:
+
+```text
+/inpalock
+```
+
+Run the same command again to unlock it.
+
+### Connect to INPA Bridge
+
+When `http://127.0.0.1:18500` is used as the Browsingway URL, the page and INPA Bridge use the same local service. The access token is injected by the plugin, so manual entry is normally unnecessary.
+
+| Command | Action |
+|---|---|
+| `/inpa` | Show or hide the front desk window |
+| `/inpareload` | Reload the in-game front desk page |
+| `/inpalock` | Lock or unlock the window position |
+| `/inpacal` | Adjust the input overlay position and size |
+
+Once the page shows an online connection, target selection, trading, and shared data features are available.
+
+### Troubleshooting
+
+- **Blank inlay**: Confirm that the URL is `http://127.0.0.1:18500` and that INPA Bridge is enabled.
+- **Cannot connect to the plugin**: Confirm that INPA Bridge is running and that port `18500` is not in use by another application.
+- **Page shows offline**: Run `/inpareload` and check the connection indicator again.
+- **Chinese input does not work**: Click the input field and use the INPA Bridge input overlay. Run `/inpacal` if the overlay position is incorrect.
+- **Cannot find the window**: Run `/inpa` to toggle visibility, then use `/inpalock` to unlock and reposition it.
+- **Window hides immediately**: Check whether Browsingway has hide-out-of-combat, hide-after-combat, or similar options enabled.
+- **Changes do not appear**: Run `/inpareload`.
+- **Page address stops working after an INPA Bridge update**: Restart the game and run `/inpa` again, then confirm that the Browsingway URL has not changed.
 
 ## Data and privacy
 
