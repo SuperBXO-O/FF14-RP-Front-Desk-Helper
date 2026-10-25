@@ -13,3 +13,11 @@ Before submitting:
 
 Constructive issues and focused pull requests are preferred.
 
+## Automated checks
+
+Run the open-source presentation checks before submitting a pull request:
+
+```bash
+node --test tests/open-source-compliance.test.js
+```
+

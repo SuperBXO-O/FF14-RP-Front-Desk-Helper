@@ -39,26 +39,10 @@ This project is not affiliated with or endorsed by Square Enix, Final Fantasy XI
 ## Deployment
 
 1. Download or clone this repository.
-2. Upload `public/index.html` to any static web host, or deploy the repository with Wrangler.
-3. Connect the repository to Cloudflare Workers for automatic deployment, if desired.
-4. Optional: install `INPA Bridge` separately and connect the page to the local plugin.
+2. Upload `public/index.html` to any static web host.
+3. Optional: install `INPA Bridge` separately and connect the page to the local plugin.
 
 No build step or third-party npm packages are required to host the app.
-
-### Cloudflare Workers
-
-The repository includes an assets-only [Wrangler configuration](wrangler.jsonc) targeting the existing `ff14rpfrontdeskhelper` Worker.
-
-```bash
-npx --yes wrangler@4.152.0 dev
-npx --yes wrangler@4.152.0 deploy
-```
-
-For a Git-connected Cloudflare Worker, use:
-
-- Build command: leave empty
-- Deploy command: `npx --yes wrangler@4.152.0 deploy`
-- Preview command: `npx --yes wrangler@4.152.0 preview`
 
 ## Data and privacy
 

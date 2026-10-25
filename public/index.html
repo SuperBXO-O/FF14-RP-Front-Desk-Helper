@@ -247,6 +247,14 @@
   header button:hover{
     background:var(--fd-signal);border-color:var(--fd-signal);color:var(--fd-on-signal)
   }
+  header .inpa-source-link{
+    min-height:34px;padding:6px 10px;border:1px solid var(--fd-rule);
+    display:inline-flex;align-items:center;gap:6px;color:var(--fd-ink);
+    font-size:10px;font-weight:700;letter-spacing:.08em;text-decoration:none;white-space:nowrap
+  }
+  header .inpa-source-link::before{content:'';width:5px;height:5px;background:var(--fd-signal);flex:0 0 auto}
+  header .inpa-source-link:hover{background:var(--fd-signal);border-color:var(--fd-signal);color:var(--fd-on-signal)}
+  header .inpa-source-link:focus-visible{outline:2px solid var(--fd-signal);outline-offset:3px}
   nav{
     gap:0;padding:0 30px;background:transparent;
     border-top:1px solid color-mix(in srgb,var(--fd-rule) 72%,transparent)
@@ -667,6 +675,8 @@
     .card,.stat .cell,.roster-item{padding:14px}
   }
   @media(max-width:520px){
+    .inpa-header-actions{width:100%;margin-left:0;flex-wrap:wrap;gap:8px}
+    .inpa-header-actions .inpa-source-link{flex:1 1 100%;justify-content:center}
     .keep2 .card{padding:10px}
     .keep2 .kv{display:block;line-height:1.45}
     .keep2 .kv b{display:block;margin-top:2px;text-align:left}
@@ -3623,6 +3633,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   <div class="spacer"></div>
   <div class="inpa-header-status" id="inpaHeaderStatus" aria-live="polite"></div>
   <div class="inpa-header-actions" id="inpaHeaderActions">
+    <a class="inpa-source-link" href="https://github.com/SuperBXO-O/FF14-RP-Front-Desk-Helper" target="_blank" rel="noopener noreferrer" title="查看源代码与 AGPL-3.0 许可证">Source / 源码 · AGPL-3.0</a>
     <button type="button" onclick="openStartSession()">Save / New Session</button>
     <button type="button" onclick="openHistorySessions()">History</button>
   </div>
