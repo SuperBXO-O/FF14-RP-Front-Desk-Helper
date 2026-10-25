@@ -88,7 +88,32 @@
   details summary{cursor:pointer;color:var(--brand2);font-size:13px}
   #settingsTable{width:auto}
   #settingsTable input{width:112px;text-align:right}
+  .inpa-billing-pick{
+    width:28px;height:28px;min-width:28px;min-height:28px;padding:0;display:inline-flex;
+    align-items:center;justify-content:center;border:0;background:transparent;
+    color:var(--fd-muted);cursor:pointer;vertical-align:middle
+  }
+  #settingsTable td.inpa-billing-cell{vertical-align:middle}
+  .inpa-billing-pick svg{
+    width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.45;
+    stroke-linecap:round;stroke-linejoin:round;pointer-events:none
+  }
+  .inpa-billing-pick:hover,.inpa-billing-pick[aria-expanded="true"]{color:var(--fd-signal)}
+  .inpa-billing-pick:focus-visible{outline:2px solid var(--fd-signal);outline-offset:2px}
+  #inpaBillingMenu{
+    position:fixed;z-index:100006;display:none;min-width:270px;padding:5px;
+    border:1px solid var(--fd-rule);background:var(--fd-panel);color:var(--fd-ink);
+    box-shadow:7px 7px 0 color-mix(in srgb,var(--fd-ink) 10%,transparent)
+  }
+  #inpaBillingMenu button{
+    display:flex;width:100%;align-items:center;gap:8px;padding:8px 10px;border:0;
+    background:transparent;color:var(--fd-ink);font:inherit;font-size:11px;text-align:left;cursor:pointer
+  }
+  #inpaBillingMenu button:hover,
+  #inpaBillingMenu button.active{background:var(--fd-panel-2);color:var(--fd-signal)}
+  #inpaBillingMenu .check{width:12px;flex:0 0 12px;color:var(--fd-signal)}
   #settingsTable th,#settingsTable td{white-space:nowrap}
+  #settingsTable thead th{text-align:center}
   #settingsTable tbody td{vertical-align:top}
   #settingsTable thead th:first-child,#settingsTable tbody td:first-child{min-width:280px}
   .inpa-item-control{display:flex;gap:4px;align-items:center}
@@ -410,6 +435,9 @@
   .inpa-delete-btn .inpa-ui-icon{width:18px;height:18px}
   .inpa-delete-btn:hover{opacity:1;color:color-mix(in srgb,var(--fd-danger) 72%,var(--fd-ink))!important}
   #settingsTable .inpa-delete-btn{position:relative;top:5px}
+  #settingsTable td.inpa-operation-cell{vertical-align:middle}
+  #settingsTable .inpa-billing-pick,
+  #settingsTable .inpa-delete-btn{top:0;vertical-align:middle;line-height:1;font-size:0}
   #roomList .inpa-delete-btn{position:relative;top:-4px}
   .inpa-account-gear{color:var(--fd-signal)!important}
   .inpa-account-gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.45;
@@ -821,6 +849,18 @@ header button{
 }
 header button:hover{
   box-shadow:3px 3px 0 color-mix(in srgb,var(--fd-on-signal) 20%,transparent);
+}
+/* 顶部三个动作只在悬停时出现偏移背板：深色皮肤自动取浅色墨迹，浅色皮肤自动取深色墨迹。 */
+.inpa-header-actions>:is(button,.inpa-source-link){
+  box-shadow:none;
+  transition:box-shadow var(--fd-motion-fast) ease,transform var(--fd-motion-fast) ease;
+}
+.inpa-header-actions>:is(button,.inpa-source-link):hover{
+  box-shadow:4px 4px 0 color-mix(in srgb,var(--fd-ink) 22%,transparent);
+}
+.inpa-header-actions>:is(button,.inpa-source-link):active{
+  transform:translate(2px,2px);
+  box-shadow:2px 2px 0 color-mix(in srgb,var(--fd-ink) 24%,transparent);
 }
 .bridge-dot{
   border:0!important;
@@ -3501,6 +3541,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     position:fixed;left:50%;bottom:24px;z-index:100040;translate:-50% 0;
     font-family:var(--fd-font-ui);transition:opacity .22s ease,visibility .22s;
   }
+  body.inpa-boot-docked #inpaSkinDock,
   body.inpa-boot-launching #inpaSkinDock{
     opacity:0;visibility:hidden;pointer-events:none;
   }
@@ -3690,7 +3731,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     <h2>开单 · 客人消费</h2>
     <div class="grid keep2" style="grid-template-columns:1.1fr .9fr">
       <div class="card">
-        <h3>① 选择业务内容</h3>
+        <h3 id="bizSelectTitle" tabindex="0" data-tip="可按住Ctrl加鼠标左键多选业务">① 选择业务内容</h3>
         <div class="pills" id="bizPills"></div>
 
         <label style="margin-top:14px">本次性质（二选一）</label>
@@ -3912,7 +3953,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       <div class="card" style="grid-column:1/-1">
         <h3>价目表（售价 / 店员结算价）</h3>
         <div class="wrap-scroll" style="max-height:none"><table id="settingsTable"></table></div>
-        <div class="muted" style="margin-top:8px">改动后自动保存。开启INPA Bridge后可绑定信物使用「交易」功能，每项绑定最多三个游戏物品。定制礼品模特交易，计算方式为「定制打赏 × 分成比例」。</div>
+        <div class="muted" style="margin-top:8px">改动后自动保存。「计算口径」按每一行单独生效；计时统一按半小时，1 小时会在公式中乘 2。开启 INPA Bridge 后可绑定信物使用「交易」功能，每项绑定最多三个游戏物品。定制礼品按「总价 × 分成比例」结算。</div>
         <div class="inpa-multi-token-note" style="margin-top:6px;color:#d94b5b;font-size:12.5px;line-height:1.6;font-weight:400">若一个业务有多种信物，请以顿号分开，如「红宝石、蓝宝石」。注意：假如“包间”业务有红宝石、蓝宝石两种信物，结账填写包间业务信物数量时，应填写组数。比如“包间”半小时，是红宝石×1、蓝宝石×1，那么结账时该栏应填写「1」，而不是「2」。</div>
       </div>
       <div class="card" style="display:none;grid-column:1/-1">
@@ -3973,12 +4014,12 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   var CONFIG = {
     shop: "前台助手",
     items: [
-      { key: "zhiming", biz: "指名（店内）", token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time"   },
-      { key: "waitdai", biz: "外带",         token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time"   },
-      { key: "baojian", biz: "包间",         token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time"   },
-      { key: "gift",    biz: "礼品",         token: "",             price: 0,   staff: 0,   unit: "个",        kind: "count"  },
-      { key: "giftx",   biz: "定制礼品",     token: "",             price: 0,   share: "",  unit: "个",        kind: "custom" },
-      { key: "special", biz: "特殊服务",     token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time"   }
+      { key: "zhiming", biz: "指名（店内）", token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time",   billingMode: "time_guest_staff" },
+      { key: "waitdai", biz: "外带",         token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time",   billingMode: "time_guest_staff" },
+      { key: "baojian", biz: "包间",         token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time",   billingMode: "time_guest_staff" },
+      { key: "gift",    biz: "礼品",         token: "",             price: 0,   staff: 0,   unit: "个",        kind: "count",  billingMode: "count_unit" },
+      { key: "giftx",   biz: "定制礼品",     token: "",             price: 0,   share: "",  unit: "个",        kind: "custom", billingMode: "total_share" },
+      { key: "special", biz: "特殊服务",     token: "",             price: 0,   staff: 0,   unit: "个/半小时", kind: "time",   billingMode: "time_guest_staff" }
     ],
     champStaff: 0,        // 香槟塔：店员每座分成
     champDj: 0,           // 香槟塔：DJ 每座分成
@@ -4001,6 +4042,23 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   var UNIT_FIELDS = ["zhiming", "waitdai", "baojian", "gift", "special", "giftx"];
   window.__INPA_UNIT_FIELDS = UNIT_FIELDS;   // INPA: expose for dynamic items
 
+  var BILLING_MODES = {
+    time: ["time_guest_staff", "time_guest", "time_staff", "time_only"],
+    count: ["count_unit", "count_guest", "count_staff"],
+    custom: ["total_share"]
+  };
+  var BILLING_LABELS = {
+    time_guest_staff: "客人数×店员数×时长×价格",
+    time_guest: "客人数×时长×价格",
+    time_staff: "店员数×时长×价格",
+    time_only: "时长×价格",
+    count_unit: "一口价",
+    count_guest: "客人数×价格",
+    count_staff: "店员数×价格",
+    total_share: "总价×分成"
+  };
+  BILLING_MODES.labels = BILLING_LABELS;
+
   function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
   function nonNegative(n) {
     var value = +n;
@@ -4011,21 +4069,56 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     var value = +n;
     return Number.isFinite(value) && value >= 1 ? value : 1;
   }
+  function billingKind(it) {
+    var kind = it && it.kind;
+    if (kind === "time" || kind === "hour" || kind === "room") return "time";
+    if (kind === "count") return "count";
+    return "custom";
+  }
+  function billingModesForKind(kind) {
+    var group = (kind === "time" || kind === "hour" || kind === "room") ? "time"
+      : (kind === "count" ? "count" : "custom");
+    return BILLING_MODES[group].slice();
+  }
+  function defaultBillingMode(it) {
+    var group = billingKind(it);
+    return group === "time" ? "time_guest_staff" : (group === "count" ? "count_unit" : "total_share");
+  }
+  function normalizeBillingMode(value, it) {
+    var modes = billingModesForKind(it && it.kind);
+    return modes.indexOf(value) >= 0 ? value : defaultBillingMode(it);
+  }
+  function billingLabel(value) { return BILLING_LABELS[value] || value || ""; }
   function isInactiveRecord(rec) {
     return !!(rec && (rec.status === "void" || rec.status === "refund" || rec.voided));
   }
   function saleItemForRecord(sale) {
-    if (sale && sale.itemSnapshot) return sale.itemSnapshot;
+    if (sale && sale.itemSnapshot) {
+      var snap = {};
+      for (var sk in sale.itemSnapshot) snap[sk] = sale.itemSnapshot[sk];
+      snap.billingMode = normalizeBillingMode(snap.billingMode, snap);
+      return snap;
+    }
     if (!sale) return null;
     return (sale.key ? itemByKey(sale.key) : null) || itemByBiz(sale.biz);
   }
   function snapshotSaleRecord(sale) {
-    if (!sale || sale.itemSnapshot) return sale;
+    if (!sale) return sale;
+    if (Array.isArray(sale.items) && sale.items.length) {
+      sale.items.forEach(function (part) { snapshotSaleRecord(part); });
+      sale.itemSnapshots = sale.items.map(function (part) { return part.itemSnapshot; });
+      return sale;
+    }
+    if (sale.itemSnapshot) {
+      sale.itemSnapshot.billingMode = normalizeBillingMode(sale.itemSnapshot.billingMode, sale.itemSnapshot);
+      return sale;
+    }
     var it = saleItemForRecord(sale);
     if (!it) return sale;
     sale.itemSnapshot = {
       key: it.key, biz: it.biz, token: it.token || "", price: nonNegative(it.price),
-      unit: it.unit || "", kind: it.kind || "", noToken: !!it.noToken
+      unit: it.unit || "", kind: it.kind || "", noToken: !!it.noToken,
+      billingMode: normalizeBillingMode((sale && sale.billingMode) || it.billingMode, it)
     };
     return sale;
   }
@@ -4074,30 +4167,42 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
 
   // ---------------- 开单计算 ----------------
   // sale = { biz, guests, staff, hours, giftCount, customAmount, buyer, note }
-  function computeSale(sale) {
-    var it = saleItemForRecord(sale);
+  // 多选时 sale.items = [{ key, billingMode, guests, staff, hours, giftCount, customAmount }]
+  function computeSingleSale(sale, it) {
     var res = { item: it, units: 0, unit: it ? it.unit : "", price: 0, lines: [] };
     if (!it) return res;
     var g = nonNegative(sale.guests), st = nonNegative(sale.staff), h = nonNegative(sale.hours), gc = nonNegative(sale.giftCount);
     var unitPrice = nonNegative(it.price);
-    if (it.kind === "time") {
-      var u1 = g * st * h * 2;            // 每半小时一个单位
-      res.lines.push({ key: it.key, label: tokenOf(it.key), units: u1 });
+    var mode = normalizeBillingMode(sale.billingMode || it.billingMode, it);
+    if (it.kind === "time" || it.kind === "hour" || it.kind === "room") {
+      var slots = h * (it.kind === "hour" ? 1 : 2);   // 计时价格默认按半小时
+      var factor = mode === "time_guest"
+        ? g
+        : mode === "time_staff"
+          ? st
+          : mode === "time_only"
+            ? 1
+            : g * st;
+      var u1 = factor * slots;
+      res.lines.push({
+        key: it.key, label: it.token || tokenOf(it.key), units: u1,
+        price: unitPrice, biz: it.biz, noToken: !!it.noToken
+      });
       res.units = u1; res.price = u1 * unitPrice;
-    } else if (it.kind === "hour") {
-      var u2 = g * st * h;                // 每小时一个单位（1 小时起）
-      res.lines.push({ key: it.key, label: tokenOf(it.key), units: u2 });
-      res.units = u2; res.price = u2 * unitPrice;
     } else if (it.kind === "count") {
-      if (!it.noToken) res.lines.push({ key: it.key, label: tokenOf(it.key), units: gc });
-      res.units = gc; res.price = gc * unitPrice;
-    } else if (it.kind === "room") {
-      // 兼容旧的 room 类型：包间已是独立计时业务，不再要求指名 + 包间信物。
-      var uRoom = g * st * h * 2;
-      res.lines.push({ key: it.key, label: tokenOf(it.key), units: uRoom });
-      res.units = uRoom; res.price = uRoom * unitPrice;
+      var billedFactor = mode === "count_guest" ? g : (mode === "count_staff" ? st : gc);
+      if (!it.noToken) {
+        res.lines.push({
+          key: it.key, label: it.token || tokenOf(it.key), units: gc,
+          price: unitPrice, biz: it.biz, noToken: false
+        });
+      }
+      res.units = gc; res.price = billedFactor * unitPrice;
     } else {                              // 定制礼品：金额填写，固定 1 个定制礼品
-      res.lines.push({ key: it.key, label: tokenOf(it.key), units: (gc || 1) });
+      res.lines.push({
+        key: it.key, label: it.token || tokenOf(it.key), units: (gc || 1),
+        price: unitPrice, biz: it.biz, noToken: false
+      });
       res.units = gc || 1;
       res.price = nonNegative(sale.customAmount);
     }
@@ -4107,22 +4212,78 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     return res;
   }
 
+  function computeSale(sale) {
+    if (!sale) return { item: null, items: [], units: 0, unit: "", price: 0, lines: [], components: [] };
+    if (!Array.isArray(sale.items) || !sale.items.length) {
+      var single = computeSingleSale(sale, saleItemForRecord(sale));
+      single.components = [single];
+      single.items = single.item ? [single.item] : [];
+      return single;
+    }
+    var common = {
+      guests: sale.guests, staff: sale.staff, hours: sale.hours,
+      giftCount: sale.giftCount, customAmount: sale.customAmount
+    };
+    var components = sale.items.map(function (part) {
+      var normalized = {};
+      ["guests", "staff", "hours", "giftCount", "customAmount", "billingMode"].forEach(function (key) {
+        normalized[key] = part[key] !== undefined ? part[key] : common[key];
+      });
+      normalized.key = part.key;
+      normalized.biz = part.biz;
+      normalized.itemSnapshot = part.itemSnapshot;
+      return computeSingleSale(normalized, saleItemForRecord(part));
+    });
+    var res = {
+      item: components.length ? components[0].item : null,
+      items: components.map(function (part) { return part.item; }),
+      units: 0, unit: "", price: 0, lines: [], components: components
+    };
+    components.forEach(function (part) {
+      res.units = round2(res.units + nonNegative(part.units));
+      res.price = round2(res.price + nonNegative(part.price));
+      res.lines = res.lines.concat(part.lines);
+    });
+    return res;
+  }
+
   function quickReply(sale) {
     var c = computeSale(sale);
-    if (!c.item) return "";
-    var it = c.item;
-    if (it.kind === "count") {
-      return it.biz + " ×" + (+sale.giftCount || 0) + "，需支付 " + fmt(c.price) + " 万，感谢惠顾！";
+    if (!c.components.length) return "";
+    if (c.components.length === 1) {
+      var only = c.components[0], onlyItem = only.item;
+      var onlyMode = normalizeBillingMode(onlyItem.billingMode, onlyItem);
+      if (onlyItem.kind === "count" && onlyMode === "count_unit") {
+        return onlyItem.biz + " ×" + (+sale.giftCount || 0) + "，需支付 " + fmt(c.price) + " 万，感谢惠顾！";
+      }
+      if (onlyItem.kind === "custom") {
+        return onlyItem.biz + "金额需支付 " + fmt(c.price) + " 万，感谢惠顾！";
+      }
     }
-    if (it.kind === "custom") {
-      return "定制礼品金额需支付 " + fmt(c.price) + " 万，感谢惠顾！";
-    }
-    if (it.kind === "room") {
-      return it.biz + "，" + (+sale.guests || 0) + " 位客人，" + (+sale.staff || 0) +
-        " 位接待人员，时长：" + (+sale.hours || 0) + " 小时，需支付 " + fmt(c.price) + " 万。";
-    }
-    return it.biz + "，" + (+sale.guests || 0) + " 位客人，" + (+sale.staff || 0) +
-      " 位接待人员，时长：" + (+sale.hours || 0) + " 小时，需支付 " + fmt(c.price) + " 万。";
+    var parts = Array.isArray(sale.items) && sale.items.length ? sale.items : [sale];
+    var needGuest = false, needStaff = false, needHours = false;
+    var names = parts.map(function (part, index) {
+      var component = c.components[index] || {};
+      var it = component.item || saleItemForRecord(part);
+      if (!it) return "";
+      var mode = normalizeBillingMode(part.billingMode || it.billingMode, it);
+      if (it.kind === "time" || it.kind === "hour" || it.kind === "room") {
+        needHours = true;
+        needGuest = needGuest || mode === "time_guest_staff" || mode === "time_guest";
+        needStaff = needStaff || mode === "time_guest_staff" || mode === "time_staff";
+      } else if (it.kind === "count") {
+        needGuest = needGuest || mode === "count_guest";
+        needStaff = needStaff || mode === "count_staff";
+        if (mode === "count_unit") return it.biz + " ×" + (+part.giftCount || +sale.giftCount || 0);
+      }
+      return it.biz;
+    }).filter(Boolean);
+    var details = [];
+    if (needGuest) details.push((+sale.guests || 0) + " 位客人");
+    if (needStaff) details.push((+sale.staff || 0) + " 位接待人员");
+    if (needHours) details.push("时长：" + (+sale.hours || 0) + " 小时");
+    return names.join("+") + "，" + (details.length ? details.join("，") + "，" : "") +
+      "需支付 " + fmt(c.price) + " 万。";
   }
   function fmt(n) { return round2(n).toString(); }
   function saleLineText(c) {
@@ -4261,10 +4422,12 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     (sales || []).forEach(function (s) {
       if (isInactiveRecord(s)) return;
       var c = computeSale(s);
-      if (!c.item) return;
-      c.lines.forEach(function (l) { sold[l.key] = round2((sold[l.key] || 0) + l.units); });
-      /* 无信物的项目（香槟塔）：不产生信物行，但要记下"卖了几座"，报表里要显示这个数 */
-      if (c.item.noToken) sold[c.item.key] = round2((sold[c.item.key] || 0) + (+c.units || 0));
+      (c.components || [c]).forEach(function (part) {
+        if (!part.item) return;
+        part.lines.forEach(function (l) { if (l.key) sold[l.key] = round2((sold[l.key] || 0) + l.units); });
+        /* 无信物的项目（香槟塔）：不产生信物行，但要记下"卖了几座"，报表里要显示这个数 */
+        if (part.item.noToken) sold[part.item.key] = round2((sold[part.item.key] || 0) + (+part.units || 0));
+      });
     });
     (settlements || []).forEach(function (r) {
       if (isInactiveRecord(r)) return;
@@ -4302,20 +4465,25 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     (sales || []).forEach(function (sale) {
       if (isInactiveRecord(sale)) return;
       var computed = computeSale(sale);
-      if (!computed.item || computed.item.noToken) return;
-      var unitPrice = nonNegative(computed.item.price);
-      computed.lines.forEach(function (line) {
-        var count = nonNegative(line.units);
-        if (!line.key || count <= 0) return;
-        if (!groups[line.key]) {
-          groups[line.key] = {
-            key: line.key, biz: computed.item.biz, unit: computed.item.unit || "",
-            entries: [], sold: 0
-          };
-          order.push(line.key);
-        }
-        groups[line.key].entries.push({ count: count, price: unitPrice });
-        groups[line.key].sold = round2(groups[line.key].sold + count);
+      (computed.components || [computed]).forEach(function (part) {
+        if (!part.item || part.item.noToken) return;
+        var unitPrice = nonNegative(part.item.price);
+        part.lines.forEach(function (line) {
+          var count = nonNegative(line.units);
+          if (!line.key || count <= 0) return;
+          if (!groups[line.key]) {
+            groups[line.key] = {
+              key: line.key, biz: part.item.biz, unit: part.item.unit || "",
+              entries: [], sold: 0
+            };
+            order.push(line.key);
+          }
+          groups[line.key].entries.push({
+            count: count,
+            price: line.price !== undefined ? nonNegative(line.price) : unitPrice
+          });
+          groups[line.key].sold = round2(groups[line.key].sold + count);
+        });
       });
     });
     var details = [], over = [];
@@ -4595,6 +4763,9 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   var api = {
     CONFIG: CONFIG, round2: round2, fmt: fmt, setItems: setItems, cloneItems: cloneItems,
     itemByKey: itemByKey, itemByBiz: itemByBiz, priceOfKey: priceOfKey, tokenOf: tokenOf, shareOf: shareOf, staffOf: staffOf, UNIT_FIELDS: UNIT_FIELDS,
+    BILLING_MODES: BILLING_MODES, BILLING_LABELS: BILLING_LABELS,
+    billingModesForKind: billingModesForKind, defaultBillingMode: defaultBillingMode,
+    normalizeBillingMode: normalizeBillingMode, billingLabel: billingLabel,
     isInactiveRecord: isInactiveRecord, snapshotSaleRecord: snapshotSaleRecord,
     settlementSnapshot: settlementSnapshot, snapshotSettlementRecord: snapshotSettlementRecord,
     recordChampDj: recordChampDj,
@@ -4663,8 +4834,21 @@ function inpaDeleteButton(context, onclick, extraClass) {
 
 function inpaAccountingGearIcon(){
   return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-    '<path d="M9.5 2.8h5l.55 2.05 1.55.9 2.02-.62 2.5 4.33-1.52 1.51v1.8l1.52 1.51-2.5 4.33-2.02-.62-1.55.9-.55 2.05h-5l-.55-2.05-1.55-.9-2.02-.62-2.5-4.33 1.52-1.51v-1.8L2.88 9.46l2.5-4.33 2.02.62 1.55-.9z"></path>' +
+    '<path d="M9.5 2.8h5l.55 2.05 1.55.9 2.02-.62 2.5 4.33-1.52 1.51v1.8l1.52 1.51-2.5 4.33-2.02-.62-1.55.9-.55 2.05h-5l-.55-2.05-1.55-.9-2.02.62-2.5-4.33 1.52-1.51v-1.8L2.88 9.46l2.5-4.33 2.02.62 1.55-.9z"></path>' +
     '<circle cx="12" cy="12" r="3.15"></circle></svg>';
+}
+
+function inpaCalculatorIcon(){
+  return '<svg class="inpa-billing-icon" data-icon="calculator" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<rect x="5.2" y="2.7" width="13.6" height="18.6" rx="1.2"></rect>' +
+    '<rect x="8" y="5.7" width="8" height="4" rx=".45"></rect>' +
+    '<rect x="8" y="12.1" width="2" height="2" rx=".25"></rect>' +
+    '<rect x="11" y="12.1" width="2" height="2" rx=".25"></rect>' +
+    '<rect x="14" y="12.1" width="2" height="2" rx=".25"></rect>' +
+    '<rect x="8" y="15.7" width="2" height="2" rx=".25"></rect>' +
+    '<rect x="11" y="15.7" width="2" height="2" rx=".25"></rect>' +
+    '<rect x="14" y="15.7" width="2" height="2" rx=".25"></rect>' +
+    '</svg>';
 }
 function inpaAccountingActionCell(context, id, rec){
   if (INPACore.isInactiveRecord(rec)) {
@@ -4764,6 +4948,7 @@ function newFrontdeskState(){
   return {
     session: newSessionMeta(),
     items: JSON.parse(JSON.stringify(defaults.items || [])),
+    removedItemKeys: [],
     cfg: {
       baseSalary: defaults.baseSalary,
       rewardMultiplier: defaults.rewardMultiplier || 1,
@@ -4789,6 +4974,7 @@ function newFrontdeskState(){
     roomLog: [],
     seqRoom: 1,
     posBizKey: "zhiming",
+    posBizKeys: ["zhiming"],
     posBiz: "指名（店内）",
     posNature: "现场",
     inpaPayouts: {},
@@ -4883,19 +5069,32 @@ function migrate(d, factoryCfg){
   var keys = {};
   (d.items||[]).forEach(function(it){ keys[it.key] = 1; });
   var complete = defaults.every(function(it){ return keys[it.key]; });
-  if(!d.items || !complete) d.items = defaults;
+  if(!Array.isArray(d.removedItemKeys)) d.removedItemKeys = [];
+  if(!d.items || !d.items.length){
+    d.items = defaults;
+  } else if(!complete){
+    if(!d.removedItemKeys.length){
+      d.items = defaults;
+    } else {
+      defaults.forEach(function(it){
+        if(!keys[it.key] && d.removedItemKeys.indexOf(it.key) < 0) d.items.push(it);
+      });
+    }
+  }
   if(d.items) d.items.forEach(function(it){
     var def = null;
     for(var i=0;i<defaults.length;i++){ if(defaults[i].key===it.key){ def=defaults[i]; break; } }
     if(def){
       if(it.token == null) it.token = def.token;
       if(it.derive == null) it.derive = def.derive;
+      if(it.billingMode == null) it.billingMode = def.billingMode;
     }
     if(it.key === "baojian"){
       it.derive = false;
       it.kind = "time";
       it.unit = "个/半小时";
     }
+    it.billingMode = INPACore.normalizeBillingMode(it.billingMode, it);
     var savedBindings = normalizedItemBindings(it);
     if(savedBindings.length) writeItemBindings(it, savedBindings);
     else if(!Array.isArray(it.bindings)) it.bindings = [];
@@ -4918,6 +5117,14 @@ function migrate(d, factoryCfg){
     return true;
   });
   d.posBizKey = picked ? picked.key : "";
+  var savedPosKeys = Array.isArray(d.posBizKeys) ? d.posBizKeys : [];
+  var savedItemKeys = {};
+  (d.items || []).forEach(function(it){ if(it && it.key) savedItemKeys[it.key] = true; });
+  d.posBizKeys = savedPosKeys.filter(function(key, index){
+    return savedPosKeys.indexOf(key) === index && !!savedItemKeys[key];
+  });
+  if(picked && d.posBizKeys.indexOf(picked.key) < 0) d.posBizKeys.unshift(picked.key);
+  if(!d.posBizKeys.length && picked) d.posBizKeys = [picked.key];
   d.posBiz = picked ? picked.biz : "";
   // 旧的“外带/包间”出售记录归入外带
   (d.sales||[]).forEach(function(s){ if(s.biz==="外带/包间"){ s.biz="外带"; s.key="waitdai"; } });
@@ -5057,77 +5264,186 @@ document.addEventListener("input", function(e){
 });
 
 /* ================= 开单 ================= */
+function posSelectableItems(){
+  return INPACore.CONFIG.items.filter(function(it){ return it && !it.hidden; });
+}
+function selectedPosItems(){
+  var selectable = posSelectableItems();
+  var byKey = {};
+  selectable.forEach(function(it){ byKey[it.key] = it; });
+  var saved = Array.isArray(state.posBizKeys) ? state.posBizKeys : [];
+  var keys = saved.filter(function(key, index){
+    return saved.indexOf(key) === index && !!byKey[key];
+  });
+  if(!keys.length && state.posBizKey && byKey[state.posBizKey]) keys = [state.posBizKey];
+  if(!keys.length && selectable.length) keys = [selectable[0].key];
+  state.posBizKeys = keys.slice();
+  var items = keys.map(function(key){ return byKey[key]; });
+  if(items.length){
+    state.posBizKey = items[0].key;
+    state.posBiz = items[0].biz;
+  }
+  return items;
+}
+function setPosSelection(keys){
+  var allowed = {};
+  posSelectableItems().forEach(function(it){ allowed[it.key] = true; });
+  var next = [];
+  (keys || []).forEach(function(key){
+    if(allowed[key] && next.indexOf(key) < 0) next.push(key);
+  });
+  if(!next.length && posSelectableItems().length) next = [posSelectableItems()[0].key];
+  state.posBizKeys = next;
+  state.posBizKey = next[0] || "";
+  state.posBiz = next.length ? INPACore.itemByKey(next[0]).biz : "";
+}
+function readPosDraft(){
+  var read = function(id, fallback){
+    var el = document.getElementById(id);
+    if(!el) return fallback;
+    var value = parseFloat(el.value);
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
+  };
+  return {
+    guests: read("posGuests", 1),
+    staff: read("posStaff", 1),
+    hours: read("posHours", 0.5),
+    giftCount: read("posGift", 1),
+    customAmount: read("posCustom", 0)
+  };
+}
 function renderBizPills(){
   var box = $("#bizPills"); box.innerHTML = "";
-  INPACore.CONFIG.items.forEach(function(it){
-    if(it.hidden) return;
+  var selected = selectedPosItems().map(function(it){ return it.key; });
+  posSelectableItems().forEach(function(it){
     var b = document.createElement("div");
-    b.className = "pill" + (it.key===state.posBizKey?" active":"");
+    var active = selected.indexOf(it.key) >= 0;
+    b.className = "pill" + (active?" active":"");
     b.innerText = it.biz;
-    b.onclick = function(){ state.posBizKey = it.key; state.posBiz = it.biz; renderBizPills(); renderPosFields(); renderNature(); };
+    b.dataset.bizKey = it.key;
+    b.setAttribute("aria-pressed", active ? "true" : "false");
+    b.tabIndex = 0;
+    var choose = function(event){
+      var draft = readPosDraft();
+      var current = selectedPosItems().map(function(item){ return item.key; });
+      var toggle = !!(event && (event.ctrlKey || event.metaKey));
+      if(toggle){
+        var at = current.indexOf(it.key);
+        if(at >= 0){
+          if(current.length === 1){ toast("至少保留一个业务项目"); return; }
+          current.splice(at, 1);
+        } else {
+          current.push(it.key);
+        }
+      } else {
+        current = [it.key];
+      }
+      setPosSelection(current);
+      renderBizPills();
+      renderPosFields(draft);
+      renderNature();
+    };
+    b.onclick = choose;
+    b.onkeydown = function(event){
+      if(event.key === "Enter" || event.key === " "){
+        event.preventDefault();
+        choose(event);
+      }
+    };
     box.appendChild(b);
   });
 }
 function currentItem(){
-  var it = state.posBizKey ? INPACore.itemByKey(state.posBizKey) : null;
-  if(!it || it.hidden) it = INPACore.itemByBiz(state.posBiz);
-  if(!it || it.hidden){
-    it = INPACore.CONFIG.items.filter(function(x){ return x && !x.hidden; })[0] || null;
-  }
-  state.posBizKey = it ? it.key : "";
-  state.posBiz = it ? it.biz : "";
-  return it;
+  return selectedPosItems()[0] || null;
 }
-function renderPosFields(){
-  var it = currentItem(); var box = $("#fields"); box.innerHTML = "";
-  if(!it) return;
+function renderPosFields(draft){
+  var items = selectedPosItems();
+  var box = $("#fields");
+  box.innerHTML = "";
+  if(!items.length) return;
+  draft = Object.assign({ guests: 1, staff: 1, hours: 0.5, giftCount: 1, customAmount: 0 }, draft || {});
+  var hasTime = items.some(function(it){ return it.kind === "time" || it.kind === "hour" || it.kind === "room"; });
+  var countItems = items.filter(function(it){ return it.kind === "count"; });
+  var hasCount = countItems.length > 0;
+  var hasCustom = items.some(function(it){ return it.kind === "custom"; });
+  var timeModes = items.map(function(it){
+    return it.kind === "time" || it.kind === "hour" || it.kind === "room"
+      ? INPACore.normalizeBillingMode(it.billingMode, it) : "";
+  });
+  var countModes = countItems.map(function(it){ return INPACore.normalizeBillingMode(it.billingMode, it); });
+  var needsGuests = timeModes.some(function(mode){ return mode === "time_guest_staff" || mode === "time_guest"; }) ||
+    countModes.indexOf("count_guest") >= 0;
+  var needsStaff = timeModes.some(function(mode){ return mode === "time_guest_staff" || mode === "time_staff"; }) ||
+    countModes.indexOf("count_staff") >= 0;
   var hoursSel = '<select id="posHours" onchange="renderPosCalc()">'+
-    INPACore.CONFIG.hoursOptions.map(function(h){return '<option value="'+h+'"'+(h===0.5?" selected":"")+'>'+h+'</option>';}).join("")+'</select>';
-  if(it.kind==="time"){
-    box.innerHTML =
-      '<div class="row">'+
-      '<div><label>客人数</label><input type="number" min="1" id="posGuests" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>店员数</label><input type="number" min="1" id="posStaff" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>时长（小时）</label>'+hoursSel+'</div></div>'+
-      '<div class="muted" style="margin-top:6px">单价 '+it.price+'w / 半小时，每满半小时计 1 个。</div>';
-  } else if(it.kind==="room"){
-    box.innerHTML =
-      '<div class="row">'+
-      '<div><label>客人数</label><input type="number" min="1" id="posGuests" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>店员数</label><input type="number" min="1" id="posStaff" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>时长（小时）</label>'+hoursSel+'</div></div>'+
-      '<div class="muted" style="margin-top:6px">包间 = 「'+esc(INPACore.tokenOf("zhiming"))+'」'+INPACore.priceOfKey("zhiming")+'w + 「'+esc(INPACore.tokenOf("room"))+'」'+INPACore.priceOfKey("room")+'w = '+((+INPACore.priceOfKey("zhiming")||0)+(+INPACore.priceOfKey("room")||0))+'w / 半小时·人。前者按 客×员×时间，后者按时间（不按人头）且全抽归店里。</div>';
-  } else if(it.kind==="hour"){
-    box.innerHTML =
-      '<div class="row">'+
-      '<div><label>客人数</label><input type="number" min="1" id="posGuests" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>店员数</label><input type="number" min="1" id="posStaff" value="1" oninput="renderPosCalc()"></div>'+
-      '<div><label>时长（小时，1 小时起）</label><input type="number" min="1" step="0.5" id="posHours" value="1" oninput="renderPosCalc()"></div></div>'+
-      '<div class="muted" style="margin-top:6px">'+it.price+'w / 一小时起算。</div>';
-  } else if(it.kind==="count"){
-    box.innerHTML = '<div class="row"><div><label>数量（个）</label><input type="number" min="1" id="posGift" value="1" oninput="renderPosCalc()"></div></div>'+
-      '<div class="muted" style="margin-top:6px">'+it.price+'w / 个，可累加。</div>';
-  } else {
-    box.innerHTML = '<div class="row"><div><label>定制金额（万）</label><input type="number" min="0" id="posCustom" value="0" oninput="renderPosCalc()"></div></div>'+
-      '<div class="muted" style="margin-top:6px">定制礼品按填写金额计价。</div>';
+    INPACore.CONFIG.hoursOptions.map(function(h){
+      return '<option value="'+h+'"'+(+h===+draft.hours?" selected":"")+'>'+h+'</option>';
+    }).join("")+'</select>';
+  var controls = "";
+  if(needsGuests){
+    controls += '<div><label>客人数</label><input type="number" min="1" id="posGuests" value="'+draft.guests+'" oninput="renderPosCalc()"></div>';
   }
+  if(needsStaff){
+    controls += '<div><label>店员数</label><input type="number" min="1" id="posStaff" value="'+draft.staff+'" oninput="renderPosCalc()"></div>';
+  }
+  if(hasTime){
+    controls += '<div><label>时长（小时）</label>'+hoursSel+'</div>';
+  }
+  if(hasCount){
+    controls += '<div><label>数量（个）</label><input type="number" min="1" id="posGift" value="'+draft.giftCount+'" oninput="renderPosCalc()"></div>';
+  }
+  if(hasCustom){
+    controls += '<div><label>定制总价（万）</label><input type="number" min="0" id="posCustom" value="'+draft.customAmount+'" oninput="renderPosCalc()"></div>';
+  }
+  var rules = items.map(function(it){
+    return esc(it.biz) + " · " + esc(INPACore.billingLabel(INPACore.normalizeBillingMode(it.billingMode, it)));
+  }).join("　|　");
+  box.innerHTML =
+    '<div class="row">'+controls+'</div>'+
+    '<div class="muted" style="margin-top:6px">计算口径：'+rules+'。Ctrl / Cmd + 左键可同时选择多个项目。</div>';
   renderPosCalc();
 }
 function collectSale(){
-  var it = currentItem(); if(!it) return null;
-  var s = { biz: state.posBiz, buyer: $("#posBuyer").value.trim(), note: $("#posNote").value.trim(),
-            guests:0, staff:0, hours:0, giftCount:0, customAmount:0, key: it?it.key:"" };
-  if(it.kind==="time" || it.kind==="hour" || it.kind==="room"){ s.guests = num("#posGuests")||1; s.staff = num("#posStaff")||1; s.hours = num("#posHours")|| (it.kind==="hour"?1:0.5); }
-  else if(it.kind==="count"){ s.giftCount = num("#posGift")||1; }
-  else { s.giftCount = 1; s.customAmount = num("#posCustom"); }
+  var items = selectedPosItems(); if(!items.length) return null;
+  var draft = readPosDraft();
+  var s = {
+    biz: items.map(function(it){ return it.biz; }).join(" + "),
+    buyer: $("#posBuyer").value.trim(),
+    note: $("#posNote").value.trim(),
+    guests: draft.guests,
+    staff: draft.staff,
+    hours: draft.hours,
+    giftCount: draft.giftCount,
+    customAmount: draft.customAmount,
+    key: items[0].key,
+    billingMode: INPACore.normalizeBillingMode(items[0].billingMode, items[0])
+  };
+  if(items.length > 1){
+    s.items = items.map(function(it){
+      return {
+        key: it.key,
+        biz: it.biz,
+        billingMode: INPACore.normalizeBillingMode(it.billingMode, it),
+        guests: draft.guests,
+        staff: draft.staff,
+        hours: draft.hours,
+        giftCount: it.kind === "custom" ? 1 : draft.giftCount,
+        customAmount: it.kind === "custom" ? draft.customAmount : 0
+      };
+    });
+  } else if(items[0].kind === "custom"){
+    s.giftCount = 1;
+  }
   return s;
 }
 function renderPosCalc(){
-  var it = currentItem(); if(!it) return;
+  var items = selectedPosItems(); if(!items.length) return;
   var s = collectSale(); var c = INPACore.computeSale(s);
   var rows = "";
-  c.lines.forEach(function(l){ if(l.units) rows += '<div class="kv"><span>'+esc(l.label)+'</span><b>'+l.units+' '+(it.unit||"")+'</b></div>'; });
-  rows += '<div class="kv"><span>业务</span><b>'+esc(it.biz)+'</b></div>';
+  (c.components || []).forEach(function(part){
+    if(!part.item) return;
+    rows += '<div class="kv"><span>'+esc(part.item.biz)+'</span><b>'+money(part.price)+' 万</b></div>';
+  });
   rows += '<div class="kv"><span>应收合计</span><b style="color:var(--brand2);font-size:16px">'+money(c.price)+' 万</b></div>';
   $("#posCalc").innerHTML = rows;
   var qq = INPACore.quickReply(s);
@@ -5185,9 +5501,11 @@ function renderNature(){
   if(rf) rf.style.display = isResv ? "" : "none";
   if(pc) pc.style.display = isResv ? "none" : "";
   if(pr) pr.style.display = isResv ? "" : "none";
-  var it = currentItem();
+  var selected = selectedPosItems();
   var rw = $("#resvRoomWrap");
-  if(rw) rw.style.display = (isResv && it && (it.key === "baojian" || it.key === "special")) ? "" : "none";
+  if(rw) rw.style.display = (isResv && selected.some(function(it){
+    return it.key === "baojian" || it.key === "special";
+  })) ? "" : "none";
   if(isResv) renderResvSummary();
 }
 function setNature(n){ state.posNature = n; renderNature(); }
@@ -5214,32 +5532,37 @@ function renderResvRoomOptions(){
   if(cur) sel.value = cur;
 }
 function renderResvSummary(){
-  var it = currentItem(); if(!it || !$("#resvSummary")) return;
+  var selected = selectedPosItems(); if(!selected.length || !$("#resvSummary")) return;
   var g = num("#resvGuests") || 1;
   var h = num("#resvHours") || 0.5;
-  var roomNo = ((it.key === "baojian" || it.key === "special") && $("#resvRoom")) ? ($("#resvRoom").value || "") : "";
+  var needsRoom = selected.some(function(it){ return it.key === "baojian" || it.key === "special"; });
+  var roomNo = (needsRoom && $("#resvRoom")) ? ($("#resvRoom").value || "") : "";
   var kv = function(l,v){ return '<div class="kv"><span>'+l+'</span><b>'+v+'</b></div>'; };
   var html = "";
   html += kv("预约客人", esc($("#resvBuyer").value.trim() || "—"));
   html += kv("预约店员", esc($("#resvStaff").value.trim() || "—"));
   html += kv("人数 × 时长", g + " 人 × " + h + " 小时");
   html += kv("预约包间号", roomNo ? esc(roomLabel(roomNo)) : "未选");
-  html += kv("关联业务内容（勾稽）", esc(it.biz));
+  html += kv("关联业务内容（勾稽）", esc(selected.map(function(it){ return it.biz; }).join(" + ")));
   $("#resvSummary").innerHTML = html;
 }
 function addReservation(){
-  var it = currentItem(); if(!it || state.posNature !== "预约") return;
+  var selected = selectedPosItems(); if(!selected.length || state.posNature !== "预约") return;
   var buyer = $("#resvBuyer").value.trim();
   if(!buyer){ toast("请先填写预约客人ID（或点[取目标]）"); return; } if(!$("#resvStaff").value.trim()){ toast("请先填写预约店员ID（或点[取目标]）"); return; }
   var roomNo = "";
-  if(it.key === "baojian" || it.key === "special"){
+  var needsRoom = selected.some(function(it){ return it.key === "baojian" || it.key === "special"; });
+  var requiresRoom = selected.some(function(it){ return it.key === "baojian"; });
+  if(needsRoom){
     roomNo = ($("#resvRoom") && $("#resvRoom").value) || "";
     // 包间：必选；特殊服务：可选，不强制
-    if(it.key === "baojian" && !roomNo){ toast("预约包间必须选择「预约包间号」"); return; }
+    if(requiresRoom && !roomNo){ toast("预约包间必须选择「预约包间号」"); return; }
   }
   var rec = { id: state.seqResv++, buyer: buyer, staff: $("#resvStaff").value.trim(),
     guests: num("#resvGuests") || 1, hours: num("#resvHours") || 0.5,
-    roomNo: roomNo, biz: it.biz, key: it.key, ts: nowStr(), note: ($("#resvNote")&&$("#resvNote").value.trim())||"" };
+    roomNo: roomNo, biz: selected.map(function(it){ return it.biz; }).join(" + "), key: selected[0].key,
+    items: selected.map(function(it){ return { key: it.key, biz: it.biz }; }),
+    ts: nowStr(), note: ($("#resvNote")&&$("#resvNote").value.trim())||"" };
   state.reservations.push(rec); save();
   renderReservations();
   $("#resvBuyer").value = ""; $("#resvStaff").value = ""; $("#resvGuests").value = 1;
@@ -5777,7 +6100,7 @@ function cancelMacro(){ editMacroIdx=-1; $("#macroFormTitle").innerText="新增�
 /* ================= 设置 ================= */
 function renderSettings(){ var _r = __inpaOrig_renderSettings.apply(this, arguments); try{ if(window.__inpaAfter_renderSettings) window.__inpaAfter_renderSettings(); }catch(e){} return _r; }
 function __inpaOrig_renderSettings(){
-  var h = "<thead><tr><th>信物名称</th><th>业务内容</th><th>计量单位</th><th class='num'>售价w</th><th class='num'>店员结算价w</th></tr></thead>";
+  var h = "<thead><tr><th>信物名称</th><th>业务内容</th><th>计量单位</th><th class='num'>售价w</th><th class='num'>店员结算价w</th><th>计算口径</th></tr></thead>";
   var b = "<tbody>";
   INPACore.CONFIG.items.forEach(function(it,i){
     var tokenCell = it.noToken
@@ -5790,10 +6113,29 @@ function __inpaOrig_renderSettings(){
     if (it.champ) settleCell = "<td class='num muted'>见下方香槟塔分成</td>";
     else if (it.kind==="custom") settleCell = "<td class='num'><input type='number' min='0' max='1' step='0.05' data-i='"+i+"' data-f='share' value='"+((it.share!=null)?it.share:0)+"'></td>";
     else settleCell = "<td class='num'><input type='number' min='0' data-i='"+i+"' data-f='staff' value='"+((it.staff!=null)?it.staff:0)+"'></td>";
-    b += "<tr data-item-index='"+i+"'>"+tokenCell+"<td>"+esc(it.biz)+"</td><td>"+esc(it.unit)+"</td>"+priceCell+settleCell+"</tr>";
+    var mode = INPACore.normalizeBillingMode(it.billingMode, it);
+    var billingCell = it.kind === "custom"
+      ? "<td class='muted inpa-billing-cell' data-fixed-billing='total_share'>总价×分成</td>"
+      : "<td class='num inpa-billing-cell'><button type='button' class='inpa-billing-pick' data-i='"+i+"' data-f='billingMode'"+
+        " data-billing-mode='"+mode+"' data-tip='计算口径：" + esc(INPACore.billingLabel(mode))+
+        "' aria-label='计算口径：" + esc(INPACore.billingLabel(mode))+"' aria-haspopup='menu' aria-expanded='false'>"+
+        inpaCalculatorIcon()+"</button></td>";
+    b += "<tr data-item-index='"+i+"' data-billing-kind='"+esc(it.kind)+"' data-billing-mode='"+mode+"'>"+
+      tokenCell+"<td>"+esc(it.biz)+"</td><td>"+esc(it.unit)+"</td>"+priceCell+settleCell+billingCell+"</tr>";
   });
   b += "</tbody>";
   $("#settingsTable").innerHTML = h + b;
+  $$("#settingsTable .inpa-billing-pick").forEach(function(button){
+    button.onclick = function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      if(button.getAttribute("aria-expanded") === "true"){
+        closeBillingMenu();
+        return;
+      }
+      openBillingMenu(+button.dataset.i, button);
+    };
+  });
   $("#cfgChampStaff").value = INPACore.CONFIG.champStaff;
   $("#cfgChampDj").value = INPACore.CONFIG.champDj;
   $("#cfgChampShop").value = INPACore.CONFIG.champShop;
@@ -5807,6 +6149,80 @@ function __inpaOrig_renderSettings(){
   syncSettleModeUI();
   syncChampWarn();
 }
+var billingMenuCleanup = null;
+function closeBillingMenu(){
+  if(typeof billingMenuCleanup === "function") billingMenuCleanup();
+  billingMenuCleanup = null;
+}
+function openBillingMenu(index, anchor){
+  closeBillingMenu();
+  var item = INPACore.CONFIG.items[index];
+  if(!item || item.kind === "custom") return;
+  var menu = document.createElement("div");
+  menu.id = "inpaBillingMenu";
+  menu.setAttribute("role", "menu");
+  var currentMode = INPACore.normalizeBillingMode(item.billingMode, item);
+  INPACore.billingModesForKind(item.kind).forEach(function(mode){
+    var option = document.createElement("button");
+    option.type = "button";
+    option.dataset.mode = mode;
+    option.setAttribute("role", "menuitem");
+    option.setAttribute("aria-checked", mode === currentMode ? "true" : "false");
+    if(mode === currentMode) option.className = "active";
+    option.innerHTML = "<span class='check'>" + (mode === currentMode ? "✓" : "") + "</span>" +
+      "<span>" + esc(INPACore.billingLabel(mode)) + "</span>";
+    option.onclick = function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      closeBillingMenu();
+      var items = INPACore.cloneItems();
+      if(!items[index]) return;
+      items[index].billingMode = mode;
+      state.items = items;
+      INPACore.setItems(items);
+      save();
+      renderSettings();
+      renderBizPills();
+      renderPosFields();
+      renderReport();
+    };
+    menu.appendChild(option);
+  });
+  document.body.appendChild(menu);
+  menu.style.display = "block";
+  var rect = anchor.getBoundingClientRect();
+  var width = menu.offsetWidth || 270;
+  var height = menu.offsetHeight || 180;
+  var left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+  var top = rect.bottom + 6;
+  if(top + height > window.innerHeight - 8 && rect.top > height + 12) top = rect.top - height - 6;
+  menu.style.left = left + "px";
+  menu.style.top = Math.max(8, top) + "px";
+  anchor.setAttribute("aria-expanded", "true");
+  function outside(event){
+    if(menu.contains(event.target) || anchor.contains(event.target)) return;
+    closeBillingMenu();
+  }
+  function keydown(event){
+    if(event.key === "Escape" || event.keyCode === 27){
+      event.preventDefault();
+      closeBillingMenu();
+      try { anchor.focus(); } catch(e){}
+    }
+  }
+  document.addEventListener("mousedown", outside, true);
+  document.addEventListener("keydown", keydown, true);
+  window.addEventListener("resize", closeBillingMenu);
+  billingMenuCleanup = function(){
+    document.removeEventListener("mousedown", outside, true);
+    document.removeEventListener("keydown", keydown, true);
+    window.removeEventListener("resize", closeBillingMenu);
+    anchor.setAttribute("aria-expanded", "false");
+    if(menu.parentElement) menu.parentElement.removeChild(menu);
+  };
+  var active = menu.querySelector("button.active") || menu.querySelector("button");
+  if(active){ try { active.focus({ preventScroll: true }); } catch(e){ try { active.focus(); } catch(_e){} } }
+}
 /* pending：输入事件里"立刻记下"的字段值（{键: 值}），键是元素 id 或 "i3:price" 这种表格单元格。
    为什么要它：游戏内是插件覆盖层把文字回填进页面的（脚本改 value），而且切页面会重绘设置、
    把输入框重置回旧值 —— 光靠"过一会儿再读 DOM"会把刚填的值读丢，表现就是「填了、切页又变回去」。 */
@@ -5818,9 +6234,10 @@ function applySettingsFromDOM(quiet, pending){
     return e ? e.value : (def === undefined ? "" : def);
   }
   var items = INPACore.cloneItems();
-  $$("#settingsTable input").forEach(function(inp){
+  $$("#settingsTable input,#settingsTable select").forEach(function(inp){
     var i = +inp.dataset.i, f = inp.dataset.f;
     if(f === "token" || f === "biz"){ items[i][f] = inp.value; return; }   // INPA: biz is a string
+    if(f === "billingMode"){ items[i][f] = inp.value; return; }
     var val = parseFloat(inp.value);
     items[i][f] = isNaN(val) ? 0 : val;
   });
@@ -5830,7 +6247,8 @@ function applySettingsFromDOM(quiet, pending){
     if (!m) return;
     var it = items[+m[1]]; if (!it) return;
     var f = m[2], v = pending[k];
-    it[f] = (f === "token" || f === "biz") ? String(v) : (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
+    it[f] = (f === "token" || f === "biz" || f === "billingMode")
+      ? String(v) : (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
   });
   state.items = items; INPACore.setItems(items);
   if(state.rooms){
@@ -7817,6 +8235,16 @@ renderAll();
     return (cell && cell.querySelector) ? cell.querySelector("label") : null;
   }
 
+  function syncRemovedSettleInputs() {
+    var customGift = itemByKeySafe("giftx");
+    ["#stlGiftx", "#stlTip"].forEach(function(selector){
+      var input = q(selector);
+      if(!input) return;
+      if(input.parentElement) input.parentElement.style.display = customGift ? "" : "none";
+      if(!customGift) input.value = 0;
+    });
+  }
+
   function applySettleLabels() {
     STL_STATIC.forEach(function (p) {
       var el = q(p[0]); if (!el) return;
@@ -7826,12 +8254,14 @@ renderAll();
       var el = q("#stlDyn_" + k); if (!el) return;
       var lb = labelOfInput(el); if (lb) lb.textContent = labelOf(k);
     });
+    syncRemovedSettleInputs();
   }
 
   /* settleCols 里的列头是写死的，在完整标签级别替换，避免误伤其它文字 */
   function relabelSettleCols(h) {
     var s = String(h);
     STL_COL.forEach(function (p) {
+      if (!itemByKeySafe(p[1])) return;
       var lb = labelOf(p[1]);
       if (!lb) return;
       s = s.replace("<th class='num'>" + p[0] + "</th>", "<th class='num'>" + esch(lb) + "</th>");
@@ -7909,9 +8339,6 @@ renderAll();
   }
 
   /* ---------- 设置页：把行变可编辑 + 每行一个删 ---------- */
-  function isProtectedPriceItem(it) {
-    return !!(it && it.key === "giftx");
-  }
   function decoratePriceRows() {
     var table = q("#settingsTable");
     if (!table) return;
@@ -7926,7 +8353,7 @@ renderAll();
       });
       if (!head.dataset.inpa) {
         var th = document.createElement("th");
-        th.className = "num"; th.textContent = "操作";
+        th.className = "num"; th.textContent = "";
         head.appendChild(th);
         head.dataset.inpa = "1";
       }
@@ -7947,14 +8374,9 @@ renderAll();
       }
 
       var td = document.createElement("td");
-      td.className = "num";
+      td.className = "num inpa-operation-cell";
       if (items[i].derive) {
         td.innerHTML = "<span class='muted'>规则项</span>";
-        row.appendChild(td);
-        return;
-      }
-      if (isProtectedPriceItem(items[i])) {
-        td.textContent = "";
         row.appendChild(td);
         return;
       }
@@ -8030,11 +8452,14 @@ renderAll();
     if (kind === "time") {
       /* 计时：按半小时计，开单页会出「时长」下拉 */
       it.kind = "time"; it.unit = "个/半小时"; it.price = 0; it.staff = 0;
+      it.billingMode = "time_guest_staff";
     } else if (kind === "share") {
       /* 总价 × 分成：这一列填的是分成比例，0.8 = 八成 */
       it.kind = "custom"; it.unit = "个"; it.price = 0; it.share = 0.8;
+      it.billingMode = "total_share";
     } else {
       it.kind = "count"; it.unit = "个"; it.price = 0; it.staff = 0;
+      it.billingMode = "count_unit";
     }
 
     var items = INPACore.cloneItems();
@@ -8053,14 +8478,17 @@ renderAll();
     var it = items[i];
     if (!it) return;
     if (it.derive) { tst("「" + it.biz + "」是规则项目，只能改名，不能删除"); return; }
-    if (isProtectedPriceItem(it)) { tst("「" + it.biz + "」是固定项目，不能删除"); return; }
     inpaAsk("删除项目「" + it.biz + "」？\n\n已经产生的流水不受影响，报表里仍然保留。", function () {
 
     try { if (typeof applySettingsFromDOM === "function") applySettingsFromDOM(); } catch (e) { }
     items = INPACore.cloneItems();
     if (!items[i]) return;
     if (items.length <= 1) { tst("至少需保留一个业务"); return; }
-    items.splice(i, 1);
+    var removed = items.splice(i, 1)[0];
+    state.removedItemKeys = Array.isArray(state.removedItemKeys) ? state.removedItemKeys : [];
+    if(removed && removed.key && state.removedItemKeys.indexOf(removed.key) < 0){
+      state.removedItemKeys.push(removed.key);
+    }
 
     /* 如果正在开单用的就是这个业务，切到第一个还在的项目 */
     try {
@@ -9064,7 +9492,10 @@ renderAll();
     if (!rec) return "";
     if (kind === "sale") {
       return JSON.stringify(["sale", rec.ts || "", rec.buyer || "", rec.biz || "", rec.key || "",
-        +rec.guests || 0, +rec.staff || 0, +rec.hours || 0, +rec.giftCount || 0, +rec.customAmount || 0]);
+        +rec.guests || 0, +rec.staff || 0, +rec.hours || 0, +rec.giftCount || 0, +rec.customAmount || 0,
+        (rec.items || []).map(function(part){
+          return [part.key || "", part.billingMode || "", +part.giftCount || 0, +part.customAmount || 0];
+        })]);
     }
     return JSON.stringify(["settlement", rec.ts || "", rec.staffId || "", +rec.zhiming || 0, +rec.waitdai || 0,
       +rec.baojian || 0, +rec.gift || 0, +rec.champ || 0, +rec.special || 0, +rec.giftx || 0, +rec.tip || 0,
@@ -13530,7 +13961,6 @@ function installStaffSuggest() {
     if (!ready || mode === "launch") return;
     mode = "launch";
     launchStart = performance.now();
-    body.classList.add("inpa-boot-launching");
     square.classList.remove("ib-ready");
     markerOrbit.classList.remove("ib-flight-active");
     square.classList.add("ib-orbit-mode");
@@ -13557,7 +13987,6 @@ function installStaffSuggest() {
     context.clearRect(0, 0, window.innerWidth, window.innerHeight);
     lastClearBounds = null;
     lastGridPaint = 0;
-    body.classList.remove("inpa-boot-launching");
     body.classList.add("inpa-boot-active");
     body.classList.remove("inpa-boot-docked");
     modulesRevealed = false;

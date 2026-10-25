@@ -31,7 +31,7 @@ This project is not affiliated with or endorsed by Square Enix, Final Fantasy XI
 - Inventory reconciliation and business reports
 - Browser-local data plus optional shared data through INPA Bridge
 - Session archive export to JSON and XLSX
-- Up to two game-item bindings per business item
+- Up to three game-item bindings per business item
 - In-game tell tickets, customer chat, ignore list and whitelist
 - Optional separate front desk and staff salary allocation modes
 - Responsive desktop and mobile layouts
