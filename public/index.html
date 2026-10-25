@@ -93,7 +93,7 @@
     align-items:center;justify-content:center;border:0;background:transparent;
     color:var(--fd-muted);cursor:pointer;vertical-align:middle
   }
-  #settingsTable td.inpa-billing-cell{vertical-align:middle}
+  #settingsTable td.inpa-billing-cell{vertical-align:middle;text-align:center}
   .inpa-billing-pick svg{
     width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.45;
     stroke-linecap:round;stroke-linejoin:round;pointer-events:none
@@ -112,6 +112,46 @@
   #inpaBillingMenu button:hover,
   #inpaBillingMenu button.active{background:var(--fd-panel-2);color:var(--fd-signal)}
   #inpaBillingMenu .check{width:12px;flex:0 0 12px;color:var(--fd-signal)}
+  .fd-icon-popup{
+    transform-origin:top right;
+    animation:fd-icon-popup-in 340ms var(--fd-ease-circ) both
+  }
+  .fd-icon-popup.fd-icon-popup-closing{
+    pointer-events:none;
+    animation:fd-icon-popup-out 300ms var(--fd-ease-circ) both
+  }
+  #inpaPickMask.fd-icon-popup,
+  #inpaDlgMask.fd-icon-popup{
+    animation:fd-icon-popup-overlay-in 220ms var(--fd-ease-out) both
+  }
+  #inpaPickMask.fd-icon-popup.fd-icon-popup-closing,
+  #inpaDlgMask.fd-icon-popup.fd-icon-popup-closing{
+    animation:fd-icon-popup-overlay-out 200ms var(--fd-ease-circ) both
+  }
+  @keyframes fd-icon-popup-in{
+    from{opacity:.45;transform:translateX(12px);clip-path:inset(0 0 0 100%)}
+    to{opacity:.95;transform:none;clip-path:inset(0)}
+  }
+  @keyframes fd-icon-popup-out{
+    from{opacity:.95;transform:none;clip-path:inset(0)}
+    to{opacity:0;transform:translateX(10px);clip-path:inset(0 0 0 100%)}
+  }
+  @keyframes fd-icon-popup-overlay-in{
+    from{opacity:0}
+    to{opacity:1}
+  }
+  @keyframes fd-icon-popup-overlay-out{
+    from{opacity:1}
+    to{opacity:0}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .fd-icon-popup,.fd-icon-popup.fd-icon-popup-closing,
+    #inpaPickMask.fd-icon-popup,#inpaDlgMask.fd-icon-popup,
+    #inpaPickMask.fd-icon-popup.fd-icon-popup-closing,
+    #inpaDlgMask.fd-icon-popup.fd-icon-popup-closing{
+      animation:none!important;transform:none!important;clip-path:none!important
+    }
+  }
   #settingsTable th,#settingsTable td{white-space:nowrap}
   #settingsTable thead th{text-align:center}
   #settingsTable tbody td{vertical-align:top}
@@ -3954,7 +3994,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
         <h3>价目表（售价 / 店员结算价）</h3>
         <div class="wrap-scroll" style="max-height:none"><table id="settingsTable"></table></div>
         <div class="muted" style="margin-top:8px">改动后自动保存。「计算口径」按每一行单独生效；计时统一按半小时，1 小时会在公式中乘 2。开启 INPA Bridge 后可绑定信物使用「交易」功能，每项绑定最多三个游戏物品。定制礼品按「总价 × 分成比例」结算。</div>
-        <div class="inpa-multi-token-note" style="margin-top:6px;color:#d94b5b;font-size:12.5px;line-height:1.6;font-weight:400">若一个业务有多种信物，请以顿号分开，如「红宝石、蓝宝石」。注意：假如“包间”业务有红宝石、蓝宝石两种信物，结账填写包间业务信物数量时，应填写组数。比如“包间”半小时，是红宝石×1、蓝宝石×1，那么结账时该栏应填写「1」，而不是「2」。</div>
+        <div class="inpa-multi-token-note" style="margin-top:6px;color:var(--fd-signal);font-size:12.5px;line-height:1.6;font-weight:400">若一个业务有多种信物，请以顿号分开，如「红宝石、蓝宝石」。注意：假如“指名”业务有红宝石、蓝宝石两种信物，结账填写指名业务信物数量时，应填写组数。比如“指名”半小时，是红宝石×1、蓝宝石×1，那么结账时该栏应填写「1」，而不是「2」。</div>
       </div>
       <div class="card" style="display:none;grid-column:1/-1">
         <h3>香槟塔分成（每座）</h3>
@@ -4825,6 +4865,47 @@ function inpaUiIcon(kind, extraClass) {
   return "";
 }
 
+function fdIconPopupReduceMotion(){
+  try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  catch(e){ return false; }
+}
+function fdIconPopupOpen(element, display){
+  if(!element) return;
+  if(element.__fdPopupCloseTimer){
+    clearTimeout(element.__fdPopupCloseTimer);
+    element.__fdPopupCloseTimer = 0;
+  }
+  element.__fdPopupClosing = false;
+  element.classList.remove("fd-icon-popup", "fd-icon-popup-closing");
+  element.style.display = display || "block";
+  if(fdIconPopupReduceMotion()) return;
+  void element.offsetWidth;
+  element.classList.add("fd-icon-popup");
+}
+function fdIconPopupClose(element, complete, immediate){
+  if(!element) return;
+  if(element.__fdPopupClosing && !immediate) return;
+  if(element.__fdPopupCloseTimer){
+    clearTimeout(element.__fdPopupCloseTimer);
+    element.__fdPopupCloseTimer = 0;
+  }
+  element.__fdPopupClosing = true;
+  function finish(){
+    element.__fdPopupCloseTimer = 0;
+    element.__fdPopupClosing = false;
+    element.classList.remove("fd-icon-popup-closing");
+    if(element.style) element.style.display = "none";
+    if(typeof complete === "function") complete();
+  }
+  if(immediate || fdIconPopupReduceMotion()){
+    finish();
+    return;
+  }
+  void element.offsetWidth;
+  element.classList.add("fd-icon-popup-closing");
+  element.__fdPopupCloseTimer = setTimeout(finish, 310);
+}
+
 function inpaDeleteButton(context, onclick, extraClass) {
   return '<button type="button" class="inpa-icon-btn inpa-delete-btn' + (extraClass ? " " + extraClass : "") +
     '" data-delete-context="' + context + '"' +
@@ -4861,8 +4942,12 @@ function inpaAccountingActionCell(context, id, rec){
 function closeAccountingRecordMenu(){
   var menu = document.getElementById("inpaAccountingRecordMenu");
   if (!menu) return;
-  menu.style.display = "none";
   menu.setAttribute("aria-hidden", "true");
+  if(menu.__fdEsc){
+    document.removeEventListener("keydown", menu.__fdEsc, true);
+    menu.__fdEsc = null;
+  }
+  fdIconPopupClose(menu);
 }
 function appendAccountingNote(rec, label, stamp){
   var marker = "【" + label + " " + stamp + "】";
@@ -4906,7 +4991,6 @@ function openAccountingRecordMenu(event, context, id){
       applyAccountingRecordAction(context, id, button.getAttribute("data-record-action"));
     };
   });
-  menu.style.display = "block";
   menu.setAttribute("aria-hidden", "false");
   var rect = event && event.currentTarget ? event.currentTarget.getBoundingClientRect() : { right: 8, top: 8 };
   var width = menu.offsetWidth || 132;
@@ -4917,6 +5001,14 @@ function openAccountingRecordMenu(event, context, id){
   if (top + height > window.innerHeight - 8 && rect.top > height + 12) top = rect.top - height - 6;
   menu.style.left = left + "px";
   menu.style.top = Math.max(8, top) + "px";
+  if(menu.__fdEsc) document.removeEventListener("keydown", menu.__fdEsc, true);
+  menu.__fdEsc = function(event){
+    if(event.key !== "Escape" && event.keyCode !== 27) return;
+    event.preventDefault();
+    closeAccountingRecordMenu();
+  };
+  document.addEventListener("keydown", menu.__fdEsc, true);
+  fdIconPopupOpen(menu, "block");
 }
 document.addEventListener("mousedown", function(event){
   var menu = document.getElementById("inpaAccountingRecordMenu");
@@ -4931,6 +5023,17 @@ var DEFAULT_MACRO_TITLES = ["欢迎 / 答疑话术","营业公告","价目查询
 
 var DEFAULT_ROOMS = [];
 function defaultRooms(){ return DEFAULT_ROOMS.map(function(r){ return { no: r.no, name: r.name }; }); }
+function defaultPosDraft(){
+  return { guests: "1", staff: "1", hours: "0.5", giftCount: "1", customAmount: "0" };
+}
+function normalizePosDraft(source){
+  var draft = defaultPosDraft();
+  source = source || {};
+  Object.keys(draft).forEach(function(key){
+    if(source[key] !== undefined && source[key] !== null) draft[key] = String(source[key]);
+  });
+  return draft;
+}
 
 function newSessionMeta() {
   var d = new Date(), p = function (n) { return String(n).padStart(2, "0"); };
@@ -4976,6 +5079,7 @@ function newFrontdeskState(){
     posBizKey: "zhiming",
     posBizKeys: ["zhiming"],
     posBiz: "指名（店内）",
+    posDraft: defaultPosDraft(),
     posNature: "现场",
     inpaPayouts: {},
     tickets: [],
@@ -5057,6 +5161,7 @@ function migrate(d, factoryCfg){
   }
   if(!d.rooms || !d.rooms.length || d.rooms.every(function(r){ return !r.name; })) d.rooms = defaultRooms();
   if(!d.reservations) d.reservations = [];
+  d.posDraft = normalizePosDraft(d.posDraft);
   if(!d.roomLog) d.roomLog = [];
   if(d.seqResv == null) d.seqResv = (d.reservations || []).reduce(function(a,r){ return Math.max(a, (+r.id||0)+1); }, 1);
   if(d.seqRoom == null) d.seqRoom = (d.roomLog || []).reduce(function(a,r){ return Math.max(a, (+r.id||0)+1); }, 1);
@@ -5298,20 +5403,24 @@ function setPosSelection(keys){
   state.posBiz = next.length ? INPACore.itemByKey(next[0]).biz : "";
 }
 function readPosDraft(){
-  var read = function(id, fallback){
+  var draft = normalizePosDraft(state.posDraft);
+  var read = function(id, key){
     var el = document.getElementById(id);
-    if(!el) return fallback;
-    var value = parseFloat(el.value);
-    return Number.isFinite(value) && value >= 0 ? value : fallback;
+    if(el) draft[key] = el.value;
   };
-  return {
-    guests: read("posGuests", 1),
-    staff: read("posStaff", 1),
-    hours: read("posHours", 0.5),
-    giftCount: read("posGift", 1),
-    customAmount: read("posCustom", 0)
-  };
+  read("posGuests", "guests");
+  read("posStaff", "staff");
+  read("posHours", "hours");
+  read("posGift", "giftCount");
+  read("posCustom", "customAmount");
+  state.posDraft = draft;
+  return draft;
 }
+function isBrowsingwayWindow(){
+  try { return /Browsingway\//i.test(navigator.userAgent || ""); }
+  catch(e){ return false; }
+}
+var posChoiceSerial = 0;
 function renderBizPills(){
   var box = $("#bizPills"); box.innerHTML = "";
   var selected = selectedPosItems().map(function(it){ return it.key; });
@@ -5323,10 +5432,9 @@ function renderBizPills(){
     b.dataset.bizKey = it.key;
     b.setAttribute("aria-pressed", active ? "true" : "false");
     b.tabIndex = 0;
-    var choose = function(event){
+    var applyChoice = function(toggle){
       var draft = readPosDraft();
       var current = selectedPosItems().map(function(item){ return item.key; });
-      var toggle = !!(event && (event.ctrlKey || event.metaKey));
       if(toggle){
         var at = current.indexOf(it.key);
         if(at >= 0){
@@ -5342,6 +5450,24 @@ function renderBizPills(){
       renderBizPills();
       renderPosFields(draft);
       renderNature();
+    };
+    var choose = function(event){
+      var nativeToggle = !!(event && (event.ctrlKey || event.metaKey));
+      var serial = ++posChoiceSerial;
+      if(nativeToggle || !isBrowsingwayWindow()) {
+        applyChoice(nativeToggle);
+        return;
+      }
+      var bridge = window.INPABridge;
+      if(bridge && typeof bridge.getModifiers === "function") {
+        bridge.getModifiers().then(function(modifiers){
+          if(serial === posChoiceSerial) applyChoice(!!(modifiers && modifiers.ctrl));
+        }).catch(function(){
+          if(serial === posChoiceSerial) applyChoice(false);
+        });
+        return;
+      }
+      applyChoice(false);
     };
     b.onclick = choose;
     b.onkeydown = function(event){
@@ -5361,7 +5487,8 @@ function renderPosFields(draft){
   var box = $("#fields");
   box.innerHTML = "";
   if(!items.length) return;
-  draft = Object.assign({ guests: 1, staff: 1, hours: 0.5, giftCount: 1, customAmount: 0 }, draft || {});
+  state.posDraft = normalizePosDraft(draft || state.posDraft);
+  draft = state.posDraft;
   var hasTime = items.some(function(it){ return it.kind === "time" || it.kind === "hour" || it.kind === "room"; });
   var countItems = items.filter(function(it){ return it.kind === "count"; });
   var hasCount = countItems.length > 0;
@@ -5406,15 +5533,19 @@ function renderPosFields(draft){
 function collectSale(){
   var items = selectedPosItems(); if(!items.length) return null;
   var draft = readPosDraft();
+  var numberOr = function (key, fallback) {
+    var value = parseFloat(draft[key]);
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
+  };
   var s = {
     biz: items.map(function(it){ return it.biz; }).join(" + "),
     buyer: $("#posBuyer").value.trim(),
     note: $("#posNote").value.trim(),
-    guests: draft.guests,
-    staff: draft.staff,
-    hours: draft.hours,
-    giftCount: draft.giftCount,
-    customAmount: draft.customAmount,
+    guests: numberOr("guests", 1) || 1,
+    staff: numberOr("staff", 1) || 1,
+    hours: numberOr("hours", 0.5) || 0.5,
+    giftCount: numberOr("giftCount", 1) || 1,
+    customAmount: numberOr("customAmount", 0),
     key: items[0].key,
     billingMode: INPACore.normalizeBillingMode(items[0].billingMode, items[0])
   };
@@ -5457,9 +5588,12 @@ function addSale(){
   if(!s.buyer){ toast("请填写购买人ID后再记入流水"); return; }
   INPACore.snapshotSaleRecord(s);
   s.ts = nowStr(); s.id = state.seqSale++;
-  state.sales.push(s); save();
-  renderSales(); renderSettleTable(); renderReport();
+  state.sales.push(s);
+  state.posDraft = defaultPosDraft();
   $("#posBuyer").value=""; $("#posNote").value="";
+  save();
+  renderSales(); renderSettleTable(); renderReport();
+  renderPosFields();
   flash(document.querySelector("#tab-pos .btn.ghost"), "已记入 ✓");
 }
 function renderSales(){ var _r = __inpaOrig_renderSales.apply(this, arguments); try{ if(window.__inpaAfter_renderSales) window.__inpaAfter_renderSales(); }catch(e){} return _r; }
@@ -6150,12 +6284,15 @@ function __inpaOrig_renderSettings(){
   syncChampWarn();
 }
 var billingMenuCleanup = null;
-function closeBillingMenu(){
-  if(typeof billingMenuCleanup === "function") billingMenuCleanup();
+function closeBillingMenu(immediate){
+  var cleanup = billingMenuCleanup;
   billingMenuCleanup = null;
+  if(typeof cleanup === "function") cleanup(!!immediate);
 }
 function openBillingMenu(index, anchor){
-  closeBillingMenu();
+  closeBillingMenu(true);
+  var stale = document.getElementById("inpaBillingMenu");
+  if(stale && stale.parentElement) stale.parentElement.removeChild(stale);
   var item = INPACore.CONFIG.items[index];
   if(!item || item.kind === "custom") return;
   var menu = document.createElement("div");
@@ -6213,13 +6350,16 @@ function openBillingMenu(index, anchor){
   document.addEventListener("mousedown", outside, true);
   document.addEventListener("keydown", keydown, true);
   window.addEventListener("resize", closeBillingMenu);
-  billingMenuCleanup = function(){
+  billingMenuCleanup = function(immediate){
     document.removeEventListener("mousedown", outside, true);
     document.removeEventListener("keydown", keydown, true);
     window.removeEventListener("resize", closeBillingMenu);
     anchor.setAttribute("aria-expanded", "false");
-    if(menu.parentElement) menu.parentElement.removeChild(menu);
+    fdIconPopupClose(menu, function(){
+      if(menu.parentElement) menu.parentElement.removeChild(menu);
+    }, immediate);
   };
+  fdIconPopupOpen(menu, "block");
   var active = menu.querySelector("button.active") || menu.querySelector("button");
   if(active){ try { active.focus({ preventScroll: true }); } catch(e){ try { active.focus(); } catch(_e){} } }
 }
@@ -6973,7 +7113,7 @@ function sweepReservations(){
 
 /* 开始新场次时把「这一场填进去、还没提交」的输入清掉：
    开单（购买人ID / 备注 / 预约那几个框）、结账（店员ID / 各种数量 / 底薪 / 倍数 / 备注）、包间（店员ID / 房间 / 时长）。
-   设置项（价目、店员名单、宏、包间设置）不动。业务内容里的数量那些框由 renderPosFields 重建，本来就是默认值。 */
+   设置项（价目、店员名单、宏、包间设置）不动。开单草稿也在这里统一恢复默认。 */
 function resetSessionForms(){
   var firstHour = function () {
     var hs = INPACore.CONFIG.hoursOptions;
@@ -6982,6 +7122,7 @@ function resetSessionForms(){
   var set = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
   /* 开单 */
   set("posBuyer", ""); set("posNote", "");
+  state.posDraft = defaultPosDraft();
   /* 开单 · 预约 */
   set("resvBuyer", ""); set("resvStaff", ""); set("resvGuests", 1); set("resvNote", "");
   set("resvHours", firstHour());
@@ -7326,6 +7467,7 @@ renderAll();
         ? ("INPA Bridge 已连接（扩展 " + VERSION + "）")
         : (pluginReachable
           ? "已发现 INPA Bridge，但网页还没有通过该版本的连接口令，当前仍是离线模式。"
+            + "点击输入插件设置中的网页连接口令，连接本机插件。"
           : ("未连接游戏：请先在游戏内 /xlplugins 启用 INPA Bridge 插件。\n\n"
             + "只想纯离线记账（数据只在这个浏览器里）就不用管它。")));
       dot.removeAttribute("title");
@@ -7833,12 +7975,12 @@ renderAll();
     if (!online) closeRoomChannelMenu();
   }
 
-  function closeRoomChannelMenu() {
+  function closeRoomChannelMenu(immediate) {
     var menu = q("#inpaRoomChannelMenu");
     var gear = q("#inpaRoomChannelBtn");
     if (menu) {
-      menu.style.display = "none";
       menu.setAttribute("aria-hidden", "true");
+      fdIconPopupClose(menu, null, immediate === true);
     }
     if (gear) gear.setAttribute("aria-expanded", "false");
   }
@@ -7903,7 +8045,6 @@ renderAll();
     var gear = q("#inpaRoomChannelBtn");
     if (!menu || !gear) return;
     renderRoomChannelMenu();
-    menu.style.display = "block";
     menu.setAttribute("aria-hidden", "false");
     gear.setAttribute("aria-expanded", "true");
     var rect = gear.getBoundingClientRect();
@@ -7914,6 +8055,7 @@ renderAll();
     if (top + height > window.innerHeight - 8 && rect.top > height + 12) top = rect.top - height - 7;
     menu.style.left = left + "px";
     menu.style.top = Math.max(8, top) + "px";
+    fdIconPopupOpen(menu, "block");
     loadRoomBroadcastChannels(true);
   }
 
@@ -8892,6 +9034,7 @@ renderAll();
       "<button type='button' class='btn' id='inpaPickSave'>保存绑定</button></div>";
     mask.appendChild(box);
     document.body.appendChild(mask);
+    fdIconPopupOpen(mask, "flex");
 
     var listEl = q("#inpaPickList");
     function paint() {
@@ -8920,13 +9063,18 @@ renderAll();
         };
       });
     }
+    function closePicker(){
+      fdIconPopupClose(mask, function(){
+        if(mask.parentElement) mask.parentElement.removeChild(mask);
+      });
+    }
     q("#inpaPickSearch").oninput = paint;
-    q("#inpaPickCancel").onclick = function () { mask.parentElement.removeChild(mask); };
-    q("#inpaPickClear").onclick = function () { selected = []; setBindings(key, []); tst("已清除绑定"); mask.parentElement.removeChild(mask); };
+    q("#inpaPickCancel").onclick = closePicker;
+    q("#inpaPickClear").onclick = function () { selected = []; setBindings(key, []); tst("已清除绑定"); closePicker(); };
     q("#inpaPickSave").onclick = function () {
       setBindings(key, selected);
       tst(selected.length ? ("已绑定物品：" + selected.map(function (s) { return s.name; }).join("、")) : "已清除绑定");
-      mask.parentElement.removeChild(mask);
+      closePicker();
     };
     loadInventory().then(function () { paint(); try { q("#inpaPickSearch").focus(); } catch (e) { } });
   }
@@ -9380,7 +9528,19 @@ renderAll();
     setOnline: setOnline,
     syncTradeButtons: syncTradeButtons,
     ping: ping,
-    isOnline: function () { return !!online; }
+    isOnline: function () { return !!online; },
+    getModifiers: function () {
+      if(!online) return Promise.resolve({ ctrl: false, shift: false, alt: false });
+      return req("GET", "/modifier").then(function(response){
+        return {
+          ctrl: !!(response && response.ctrl),
+          shift: !!(response && response.shift),
+          alt: !!(response && response.alt)
+        };
+      }).catch(function(){
+        return { ctrl: false, shift: false, alt: false };
+      });
+    }
   };
 
   /* 恢复空白默认值。共用数据是真正的数据源，所以必须先成功覆盖它，再刷新页面；
@@ -10153,8 +10313,8 @@ renderAll();
   function inpaDialog(opts) {
     var old = q("#inpaDlgMask");
     if (old) {
-      if (typeof old.__inpaEscClose === "function") old.__inpaEscClose();
-      else if (old.parentElement) old.parentElement.removeChild(old);
+      if(old.__inpaEscHandler) window.removeEventListener("keydown", old.__inpaEscHandler, true);
+      if (old.parentElement) old.parentElement.removeChild(old);
     }
     var mask = document.createElement("div");
     mask.id = "inpaDlgMask";
@@ -10189,9 +10349,12 @@ renderAll();
     };
     function close() {
       window.removeEventListener("keydown", escHandler, true);
-      if (mask.parentElement) mask.parentElement.removeChild(mask);
+      fdIconPopupClose(mask, function(){
+        if (mask.parentElement) mask.parentElement.removeChild(mask);
+      });
     }
     mask.__inpaEscClose = close;
+    mask.__inpaEscHandler = escHandler;
     if (opts.cancel) {
       var no = document.createElement("button");
       no.type = "button"; no.className = "btn ghost"; no.textContent = opts.cancelText || "Cancel";
@@ -10207,6 +10370,7 @@ renderAll();
     box.appendChild(bar);
     mask.appendChild(box);
     if (document.body) document.body.appendChild(mask);
+    fdIconPopupOpen(mask, "flex");
     window.addEventListener("keydown", escHandler, true);
     return mask;
   }
@@ -11611,9 +11775,13 @@ function installStaffSuggest() {
   }
   function tkChatCloseMenu() {
     var m = document.getElementById("tkChatChanMenu");
-    if (m) m.classList.remove("on");
+    if (m && m.classList.contains("on")) {
+      fdIconPopupClose(m, function(){ m.classList.remove("on"); });
+    }
     var q = document.getElementById("tkQuickMenu");
-    if (q) q.classList.remove("on");
+    if (q && q.classList.contains("on")) {
+      fdIconPopupClose(q, function(){ q.classList.remove("on"); });
+    }
   }
   /* ---------- 快捷回复（左键「排队/回复」弹出） ---------- */
   var TK_QUICK_DEFAULT = ["您好，前台为您服务。", "感谢惠顾，祝您玩儿的愉快。"];
@@ -11652,9 +11820,13 @@ function installStaffSuggest() {
   function tkQuickToggle() {
     var m = document.getElementById("tkQuickMenu");
     if (!m) return;
-    if (m.classList.contains("on")) { m.classList.remove("on"); return; }
+    if (m.classList.contains("on")) {
+      fdIconPopupClose(m, function(){ m.classList.remove("on"); });
+      return;
+    }
     tkQuickRender();
     m.classList.add("on");
+    fdIconPopupOpen(m, "block");
     var ch = document.getElementById("tkChatChanMenu");
     if (ch) ch.classList.remove("on");
   }
@@ -11793,7 +11965,13 @@ function installStaffSuggest() {
     document.getElementById("tkChatChanBtn").onclick = function (e) {
       e.stopPropagation();
       var m = document.getElementById("tkChatChanMenu");
-      if (m) m.classList.toggle("on");
+      if (!m) return;
+      if (m.classList.contains("on")) {
+        fdIconPopupClose(m, function(){ m.classList.remove("on"); });
+      } else {
+        m.classList.add("on");
+        fdIconPopupOpen(m, "block");
+      }
     };
     document.getElementById("tkChatChanMenu").onclick = function (e) {
       var it = (e.target && e.target.closest) ? e.target.closest(".tk-chan-item") : null;
@@ -11848,7 +12026,9 @@ function installStaffSuggest() {
       var m = document.getElementById("tkChatChanMenu");
       if (m && m.classList.contains("on") && !m.contains(e.target) && e.target.id !== "tkChatChanBtn") tkChatCloseMenu();
       var q = document.getElementById("tkQuickMenu");
-      if (q && q.classList.contains("on") && !q.contains(e.target) && e.target.id !== "tkChatAction") q.classList.remove("on");
+      if (q && q.classList.contains("on") && !q.contains(e.target) && e.target.id !== "tkChatAction") {
+        fdIconPopupClose(q, function(){ q.classList.remove("on"); });
+      }
     }, true);
     tkChatRestorePos(box);
   }
