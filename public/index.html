@@ -1064,6 +1064,25 @@ input:focus,select:focus,textarea:focus{
   box-shadow:none;
 }
 
+#bizPills .pill::after{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:3px;
+  background:var(--fd-signal);
+  border:0;
+  box-shadow:none;
+  transform:scaleY(0);
+  transform-origin:bottom;
+  transition:transform var(--fd-motion-standard) var(--fd-ease-out);
+  pointer-events:none;
+}
+#bizPills .pill:hover::after{
+  transform:scaleY(1);
+}
+
 thead::before{
   display:none!important;
 }
@@ -3891,7 +3910,8 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       <div class="card" style="grid-column:1/-1">
         <h3>价目表（售价 / 店员结算价）</h3>
         <div class="wrap-scroll" style="max-height:none"><table id="settingsTable"></table></div>
-        <div class="muted" style="margin-top:8px">改动后自动保存。第一列可为每项绑定最多两个游戏物品，名称会以「红宝石、蓝宝石」的形式显示在同一个框里；出售记录与开单按「名称×数量」显示。包间是独立业务项，按自己的售价与结算价计算。定制礼品为「定制打赏 × 分成比例」。</div>
+        <div class="muted" style="margin-top:8px">改动后自动保存。开启INPA Bridge后可绑定信物使用「交易」功能，每项绑定最多三个游戏物品。定制礼品模特交易，计算方式为「定制打赏 × 分成比例」。</div>
+        <div class="inpa-multi-token-note" style="margin-top:6px;color:#d94b5b;font-size:12.5px;line-height:1.6;font-weight:400">若一个业务有多种信物，请以顿号分开，如「红宝石、蓝宝石」。注意：假如“包间”业务有红宝石、蓝宝石两种信物，结账填写包间业务信物数量时，应填写组数。比如“包间”半小时，是红宝石×1、蓝宝石×1，那么结账时该栏应填写「1」，而不是「2」。</div>
       </div>
       <div class="card" style="display:none;grid-column:1/-1">
         <h3>香槟塔分成（每座）</h3>
@@ -4105,7 +4125,12 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   function fmt(n) { return round2(n).toString(); }
   function saleLineText(c) {
     var ls = (c.lines || []).filter(function (l) { return l.units; });
-    return ls.length ? ls.map(function (l) { return l.label + "×" + l.units; }).join(" + ") : "";
+    return ls.length ? ls.map(function (l) {
+      var names = String(l.label || "").split("、").filter(function (name) { return name; });
+      return (names.length ? names : [l.label]).map(function (name) {
+        return name + "×" + l.units;
+      }).join("、");
+    }).join(" + ") : "";
   }
 
   // ---------------- 结账算薪 ----------------
@@ -4775,7 +4800,8 @@ var state = newFrontdeskState();
 window.__inpaNewState = newFrontdeskState;
 var editRosterIdx = -1, editMacroIdx = -1;
 
-/* 每个业务最多绑定两个游戏物品；显示时共用一个名称框，以「、」分隔。 */
+/* 每个业务最多绑定三个游戏物品；显示时共用一个名称框，以「、」分隔。 */
+var INPA_MAX_ITEM_BINDINGS = 3;
 function normalizedItemBindings(item){
   var src = item && Array.isArray(item.bindings) ? item.bindings : [];
   if (!src.length && item && +item.itemId) {
@@ -4788,7 +4814,7 @@ function normalizedItemBindings(item){
     seen[id] = 1;
     out.push({ id: id, name: String((b && b.name) || ("#" + id)) });
   });
-  return out.slice(0, 2);
+  return out.slice(0, INPA_MAX_ITEM_BINDINGS);
 }
 function writeItemBindings(item, list){
   if(!item) return;
@@ -8382,7 +8408,7 @@ renderAll();
         (bindings.length ? ("已绑物品：" + esch(bindings.map(function(x){ return x.name; }).join("、"))) : "未绑物品（交易时手动放）") + "</div>";
       var pickBtn = cell.querySelector(".inpa-pick");
       /* 在线时的说明：绑定背包物品 → 可用「交易」自动交付；名称与绑定物品不一致会自动解绑 */
-      pickBtn.setAttribute("data-tip", "绑定最多两个背包物品，绑定后即可使用「交易」功能自动交付。若绑定物品和输入名称不一致，绑定自动失效。");
+      pickBtn.setAttribute("data-tip", "绑定最多三个背包物品，绑定后即可使用「交易」功能自动交付。若绑定物品和输入名称不一致，绑定自动失效。");
       pickBtn.onclick = function (e) {
         e.preventDefault();
         if (!online) { tst(OFFLINE_TIP); return; }
@@ -8419,7 +8445,7 @@ renderAll();
   function openItemPicker(key, title) {
     if (!online) { tst("游戏未连接：请先启用 INPA Bridge 插件"); return; }
     var old = q("#inpaPickMask"); if (old && old.parentElement) old.parentElement.removeChild(old);
-    var selected = bindingsOf(key).slice(0, 2);
+    var selected = bindingsOf(key).slice(0, INPA_MAX_ITEM_BINDINGS);
 
     var mask = document.createElement("div");
     mask.id = "inpaPickMask";
@@ -8458,7 +8484,7 @@ renderAll();
           var at = -1;
           selected.some(function (s, i) { if (s.id === id) { at = i; return true; } return false; });
           if (at >= 0) selected.splice(at, 1);
-          else if (selected.length >= 2) { tst("每个业务最多绑定两个游戏物品"); return; }
+          else if (selected.length >= INPA_MAX_ITEM_BINDINGS) { tst("每个业务最多绑定三个游戏物品"); return; }
           else selected.push({ id: id, name: row.getAttribute("data-name") });
           paint();
         };

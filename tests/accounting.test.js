@@ -169,6 +169,35 @@ test("count, custom gift and champagne price independently", () => {
   assert.equal(champagne.lines.length, 0, "champagne has no token row");
 });
 
+test("each bound token gets its own quantity in the sale line", () => {
+  const core = loadCore();
+  core.setItems(
+    core.CONFIG.items.map((item) =>
+      item.key === "baojian"
+        ? Object.assign({}, item, {
+            token: "教堂爆米花、重生之境",
+            bindings: [
+              { id: 1, name: "教堂爆米花" },
+              { id: 2, name: "重生之境" }
+            ]
+          })
+        : item
+    )
+  );
+  const sale = {
+    biz: "包间",
+    key: "baojian",
+    guests: 1,
+    staff: 1,
+    hours: 0.5
+  };
+  core.snapshotSaleRecord(sale);
+  assert.equal(
+    core.saleLineText(core.computeSale(sale)),
+    "教堂爆米花×1、重生之境×1"
+  );
+});
+
 test("settlement applies reward multiplier only to named and takeout", () => {
   const core = loadCore();
   const result = core.computeSettlement(
