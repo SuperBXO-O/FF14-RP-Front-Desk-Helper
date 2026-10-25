@@ -1064,7 +1064,8 @@ input:focus,select:focus,textarea:focus{
   box-shadow:none;
 }
 
-#bizPills .pill::after{
+#bizPills .pill::after,
+#naturePills .pill::after{
   content:"";
   position:absolute;
   left:0;
@@ -1079,7 +1080,8 @@ input:focus,select:focus,textarea:focus{
   transition:transform var(--fd-motion-standard) var(--fd-ease-out);
   pointer-events:none;
 }
-#bizPills .pill:hover::after{
+#bizPills .pill:hover::after,
+#naturePills .pill:hover::after{
   transform:scaleY(1);
 }
 
