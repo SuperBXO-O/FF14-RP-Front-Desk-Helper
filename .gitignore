@@ -1,0 +1,13 @@
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+release/
+*.zip
+*.log
+*.bak
+*.tmp
+data/
+.env
+.env.*
+
