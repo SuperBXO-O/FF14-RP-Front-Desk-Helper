@@ -35,6 +35,10 @@ This project is not affiliated with or endorsed by Square Enix, Final Fantasy XI
 - In-game tell tickets, customer chat, ignore list and whitelist
 - Optional separate front desk and staff salary allocation modes
 - Responsive desktop and mobile layouts
+- Historical sale prices and wage rates are frozen with each posted record
+- Sales and settlements can be voided or refunded without deleting the voucher
+- Concurrent sales and settlements from multiple windows are merged safely
+- Over-returned tokens appear as clearly marked reconciliation exceptions
 
 ## Deployment
 

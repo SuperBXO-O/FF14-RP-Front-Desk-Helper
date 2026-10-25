@@ -111,6 +111,8 @@
   #unsettledDetail .um-row>*:first-child{text-align:left}   /* 业务内容这列靠左 */
   #unsettledDetail .um-head>*{color:var(--muted);font-weight:600;font-size:12px}
   #unsettledDetail .um-total>*{font-weight:600}
+  #unsettledDetail .inpa-over-row{color:var(--fd-warn)}
+  #unsettledDetail .inpa-over-row>*{border-top:1px dashed color-mix(in srgb,var(--fd-warn) 46%,transparent)}
   #settleModePills .pill{font-size:12.5px;padding:6px 12px}
   /* ===== 阶段0：密聊工单 ===== */
   /* 工单面板整块定高、三个列表各自内部滚动：来多少工单，「② 自动计算」的高度都不变 */
@@ -409,6 +411,19 @@
   .inpa-delete-btn:hover{opacity:1;color:color-mix(in srgb,var(--fd-danger) 72%,var(--fd-ink))!important}
   #settingsTable .inpa-delete-btn{position:relative;top:5px}
   #roomList .inpa-delete-btn{position:relative;top:-4px}
+  .inpa-account-gear{color:var(--fd-signal)!important}
+  .inpa-account-gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.45;
+    stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .inpa-account-gear:hover{opacity:1;color:var(--fd-ink)!important}
+  #inpaAccountingRecordMenu{position:fixed;z-index:100005;display:none;min-width:132px;padding:5px;
+    border:1px solid var(--fd-rule);background:var(--fd-panel);color:var(--fd-ink);
+    box-shadow:7px 7px 0 color-mix(in srgb,var(--fd-ink) 10%,transparent)}
+  #inpaAccountingRecordMenu button{display:block;width:100%;padding:8px 10px;border:0;background:transparent;
+    color:var(--fd-ink);font:inherit;font-size:11px;text-align:left;cursor:pointer}
+  #inpaAccountingRecordMenu button:hover{background:var(--fd-panel-2);color:var(--fd-signal)}
+  .inpa-record-inactive{opacity:.58}
+  .inpa-record-status{display:inline-flex;min-width:48px;justify-content:center;padding:2px 7px;
+    border:1px solid var(--fd-warn);color:var(--fd-warn);font-size:10px;font-weight:700}
   .inpa-macro-actions,.inpa-roster-actions{
     display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;
     transform:translateY(-12px)}
@@ -3465,7 +3480,6 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     position:fixed;left:50%;bottom:24px;z-index:100040;translate:-50% 0;
     font-family:var(--fd-font-ui);transition:opacity .22s ease,visibility .22s;
   }
-  body.inpa-boot-docked #inpaSkinDock,
   body.inpa-boot-launching #inpaSkinDock{
     opacity:0;visibility:hidden;pointer-events:none;
   }
@@ -3966,6 +3980,69 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   window.__INPA_UNIT_FIELDS = UNIT_FIELDS;   // INPA: expose for dynamic items
 
   function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+  function nonNegative(n) {
+    var value = +n;
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
+  function shareRatio(n) { return Math.min(1, nonNegative(n)); }
+  function rewardMultiplier(n) {
+    var value = +n;
+    return Number.isFinite(value) && value >= 1 ? value : 1;
+  }
+  function isInactiveRecord(rec) {
+    return !!(rec && (rec.status === "void" || rec.status === "refund" || rec.voided));
+  }
+  function saleItemForRecord(sale) {
+    if (sale && sale.itemSnapshot) return sale.itemSnapshot;
+    if (!sale) return null;
+    return (sale.key ? itemByKey(sale.key) : null) || itemByBiz(sale.biz);
+  }
+  function snapshotSaleRecord(sale) {
+    if (!sale || sale.itemSnapshot) return sale;
+    var it = saleItemForRecord(sale);
+    if (!it) return sale;
+    sale.itemSnapshot = {
+      key: it.key, biz: it.biz, token: it.token || "", price: nonNegative(it.price),
+      unit: it.unit || "", kind: it.kind || "", noToken: !!it.noToken
+    };
+    return sale;
+  }
+  function settlementSnapshot(cfg) {
+    cfg = cfg || CONFIG;
+    var rates = {}, shares = {};
+    CONFIG.items.forEach(function (it) {
+      rates[it.key] = staffOf(it.key, cfg);
+      shares[it.key] = shareOf(it.key, cfg);
+    });
+    return {
+      rates: rates,
+      shares: shares,
+      champStaff: nonNegative(cfg.champStaff),
+      champDj: nonNegative(cfg.champDj),
+      champShop: nonNegative(cfg.champShop),
+      djStaff: String(cfg.djStaff || "").trim()
+    };
+  }
+  function snapshotSettlementRecord(rec, cfg) {
+    if (rec && !rec.settlementSnapshot) rec.settlementSnapshot = settlementSnapshot(cfg);
+    return rec;
+  }
+  function recordSettlementRate(rec, key, cfg) {
+    var rates = rec && rec.settlementSnapshot && rec.settlementSnapshot.rates;
+    return (rates && Object.prototype.hasOwnProperty.call(rates, key)) ? nonNegative(rates[key]) : staffOf(key, cfg);
+  }
+  function recordSettlementShare(rec, key, cfg) {
+    var shares = rec && rec.settlementSnapshot && rec.settlementSnapshot.shares;
+    return (shares && Object.prototype.hasOwnProperty.call(shares, key)) ? shareRatio(shares[key]) : shareOf(key, cfg);
+  }
+  function recordChampDj(rec, cfg) {
+    cfg = cfg || CONFIG;
+    var snapshot = (rec && rec.settlementSnapshot) || null;
+    var count = nonNegative(rec && rec.champ);
+    var rate = snapshot ? nonNegative(snapshot.champDj) : nonNegative(cfg.champDj);
+    var staffId = String((snapshot ? snapshot.djStaff : cfg.djStaff) || "").trim() || "DJ";
+    return { count: count, rate: rate, staffId: staffId, amount: round2(count * rate) };
+  }
   function setItems(items) { if (items && items.length) CONFIG.items = items; }
   function cloneItems() { return CONFIG.items.map(function (it) { var o = {}; for (var k in it) o[k] = it[k]; return o; }); }
   function itemByKey(k) { for (var i = 0; i < CONFIG.items.length; i++) if (CONFIG.items[i].key === k) return CONFIG.items[i]; return null; }
@@ -3976,30 +4053,31 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   // ---------------- 开单计算 ----------------
   // sale = { biz, guests, staff, hours, giftCount, customAmount, buyer, note }
   function computeSale(sale) {
-    var it = itemByBiz(sale.biz);
+    var it = saleItemForRecord(sale);
     var res = { item: it, units: 0, unit: it ? it.unit : "", price: 0, lines: [] };
     if (!it) return res;
-    var g = +sale.guests || 0, st = +sale.staff || 0, h = +sale.hours || 0, gc = +sale.giftCount || 0;
+    var g = nonNegative(sale.guests), st = nonNegative(sale.staff), h = nonNegative(sale.hours), gc = nonNegative(sale.giftCount);
+    var unitPrice = nonNegative(it.price);
     if (it.kind === "time") {
       var u1 = g * st * h * 2;            // 每半小时一个单位
       res.lines.push({ key: it.key, label: tokenOf(it.key), units: u1 });
-      res.units = u1; res.price = u1 * it.price;
+      res.units = u1; res.price = u1 * unitPrice;
     } else if (it.kind === "hour") {
       var u2 = g * st * h;                // 每小时一个单位（1 小时起）
       res.lines.push({ key: it.key, label: tokenOf(it.key), units: u2 });
-      res.units = u2; res.price = u2 * it.price;
+      res.units = u2; res.price = u2 * unitPrice;
     } else if (it.kind === "count") {
       if (!it.noToken) res.lines.push({ key: it.key, label: tokenOf(it.key), units: gc });
-      res.units = gc; res.price = gc * it.price;
+      res.units = gc; res.price = gc * unitPrice;
     } else if (it.kind === "room") {
       // 兼容旧的 room 类型：包间已是独立计时业务，不再要求指名 + 包间信物。
       var uRoom = g * st * h * 2;
       res.lines.push({ key: it.key, label: tokenOf(it.key), units: uRoom });
-      res.units = uRoom; res.price = uRoom * it.price;
+      res.units = uRoom; res.price = uRoom * unitPrice;
     } else {                              // 定制礼品：金额填写，固定 1 个定制礼品
       res.lines.push({ key: it.key, label: tokenOf(it.key), units: (gc || 1) });
       res.units = gc || 1;
-      res.price = +sale.customAmount || 0;
+      res.price = nonNegative(sale.customAmount);
     }
     res.price = round2(res.price);
     res.units = round2(res.units);
@@ -4031,44 +4109,48 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   }
 
   // ---------------- 结账算薪 ----------------
-  function shareOf(key, cfg) { cfg = cfg || CONFIG; var it = itemByKey(key); return (it && it.share != null) ? (+it.share || 0) : 0; }
+  function shareOf(key, cfg) { cfg = cfg || CONFIG; var it = itemByKey(key); return (it && it.share != null) ? shareRatio(it.share) : 0; }
   // 店员每单位结算价：优先取 item.staff；旧数据回退为 price × share
   function staffOf(key, cfg) {
     cfg = cfg || CONFIG; var it = itemByKey(key); if (!it) return 0;
-    if (it.staff != null) return +it.staff || 0;
-    return round2((+it.price || 0) * (+it.share || 0));
+    if (it.staff != null) return nonNegative(it.staff);
+    return round2(nonNegative(it.price) * shareRatio(it.share));
   }
   function giftValue(rec) {
-    return (+rec.gift || 0) * staffOf("gift") + (+rec.giftx || 0) * shareOf("giftx") + (+rec.tip || 0);
+    return nonNegative(rec.gift) * staffOf("gift") + nonNegative(rec.giftx) * shareOf("giftx") + nonNegative(rec.tip);
   }
   // rec = { staffId, zhiming, waitdai, baojian, gift, champ, special, giftx, tip, mult, base }
   // 店员结算 = 各业务数量 × 该业务的「店员结算价」；定制礼品按金额×分成比例；打赏按分成比例；香槟塔按固定分成。
   function computeSettlement(rec, cfg) {
     try { window.__inpaComputeSettlement = computeSettlement; } catch (e) { }
     cfg = cfg || CONFIG;
+    var snapshot = rec.settlementSnapshot || null;
+    var rate = function (key) { return recordSettlementRate(rec, key, cfg); };
+    var share = function (key) { return recordSettlementShare(rec, key, cfg); };
+    var champStaffRate = snapshot ? nonNegative(snapshot.champStaff) : nonNegative(cfg.champStaff);
     var AS = round2(
-      (+rec.zhiming || 0) * staffOf("zhiming", cfg) +
-      (+rec.waitdai || 0) * staffOf("waitdai", cfg) +
-      (+rec.baojian || 0) * staffOf("baojian", cfg) +
-      (+rec.room || 0) * staffOf("room", cfg) +
-      (+rec.special || 0) * staffOf("special", cfg) +
-      (+rec.champ   || 0) * (cfg.champStaff || 0)
+      nonNegative(rec.zhiming) * rate("zhiming") +
+      nonNegative(rec.waitdai) * rate("waitdai") +
+      nonNegative(rec.baojian) * rate("baojian") +
+      nonNegative(rec.room) * rate("room") +
+      nonNegative(rec.special) * rate("special") +
+      nonNegative(rec.champ) * champStaffRate
     );
     var AG = round2(
-      (+rec.gift || 0) * staffOf("gift", cfg) +
-      (+rec.tip || 0) * shareOf("giftx", cfg)   // 定制打赏（= 定制礼品金额，按定制礼品分成比例）
+      nonNegative(rec.gift) * rate("gift") +
+      nonNegative(rec.tip) * share("giftx")   // 定制打赏（= 定制礼品金额，按定制礼品分成比例）
     );
     // 奖励倍数：只与「指名」「外带」的结算额相关
     var baseAS = round2(
-      (+rec.zhiming || 0) * staffOf("zhiming", cfg) +
-      (+rec.waitdai || 0) * staffOf("waitdai", cfg)
+      nonNegative(rec.zhiming) * rate("zhiming") +
+      nonNegative(rec.waitdai) * rate("waitdai")
     );
     var M = round2(AS + AG);
-    var N = (rec.base === undefined || rec.base === null || rec.base === "") ? (cfg.baseSalary || 0) : (+rec.base || 0);
-    var mult = +rec.mult || 1;
+    var N = (rec.base === undefined || rec.base === null || rec.base === "") ? nonNegative(cfg.baseSalary) : nonNegative(rec.base);
+    var mult = rewardMultiplier(rec.mult);
     var P = round2(baseAS * mult - baseAS);
     var __inpaX = (typeof window.__inpaExtraSettle === 'function') ? window.__inpaExtraSettle(rec, cfg) : null;
-    if (__inpaX) { AS = round2(AS + (__inpaX.as || 0)); M = round2(AS + AG); }   // INPA: \u65b0\u589e\u9879\u76ee
+    if (__inpaX) { AS = round2(AS + nonNegative(__inpaX.as)); M = round2(AS + AG); }   // INPA: \u65b0\u589e\u9879\u76ee
     var Q = round2(M + N + P);
     return { AS: AS, AG: AG, M: M, N: N, mult: mult, P: P, Q: Q };
   }
@@ -4078,11 +4160,13 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     list = list || [];
     var groups = {}, order = [], rows = new Array(list.length);
     list.forEach(function (r, i) {
+      var v = computeSettlement(r, cfg);
+      v.inactive = isInactiveRecord(r);
+      rows[i] = v;
+      if (v.inactive) return;
       var k = r.staffId || "(未填)";
       var g = groups[k];
       if (!g) { g = groups[k] = { items: [] }; order.push(k); }
-      var v = computeSettlement(r, cfg);
-      rows[i] = v;
       g.items.push({ rec: r, v: v });
     });
     var merged = order.map(function (k) {
@@ -4090,11 +4174,11 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
         AS: 0, AG: 0, M: 0, N: 0, P: 0, Q: 0, Qauto: 0, manual: 0, mults: {}, count: 0, notes: [], ts: "" };
       groups[k].items.forEach(function (o) {
         var r = o.rec, v = o.v;
-        ["zhiming", "waitdai", "baojian", "room", "gift", "champ", "special", "giftx", "tip"].forEach(function (f) { m[f] += (+r[f] || 0); });
+        ["zhiming", "waitdai", "baojian", "room", "gift", "champ", "special", "giftx", "tip"].forEach(function (f) { m[f] += nonNegative(r[f]); });
         m.AS += v.AS; m.AG += v.AG; m.M += v.M; m.N += v.N; m.P += v.P; m.Q += v.Q;
         /* INPA 手动结账：Q 照常含手动部分（应付），Qauto 只累计自动部分（可交易），manual 单列手动部分 */
         if (r.manual) m.manual += v.Q; else m.Qauto += v.Q;
-        m.mults[+r.mult || 1] = 1; m.count++;
+        m.mults[rewardMultiplier(r.mult)] = 1; m.count++;
         if (r.note) m.notes.push(r.note);
         if (r.ts) m.ts = r.ts;
       });
@@ -4103,39 +4187,42 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       m.multKeys = Object.keys(m.mults).map(Number).sort(function (a, b) { return a - b; });
       return m;
     });
-    // 香槟塔 → DJ 分成：设了「DJ 是谁」就并到那个人名下（结账页交易时一起结算），没设就单列一个 DJ
-    var totalChamp = 0;
-    list.forEach(function (r) { totalChamp += (+r.champ || 0); });
-    if (totalChamp > 0) {
-      var djAmt = round2(totalChamp * (cfg.champDj || 0));
-      var djStaff = String(cfg.djStaff || "").trim();
-      var djNote = "香槟塔自动分成：×" + totalChamp + " × " + (cfg.champDj || 0);
-      if (djStaff) {
-        var hit = null;
-        for (var mi = 0; mi < merged.length; mi++) { if (merged[mi].staffId === djStaff) { hit = merged[mi]; break; } }
-        if (hit) {
-          hit.AS = round2(hit.AS + djAmt);
-          hit.M = round2(hit.M + djAmt);
-          hit.Q = round2(hit.Q + djAmt);
-          hit.Qauto = round2((hit.Qauto || 0) + djAmt);   // DJ 分成是可交易的部分
-          hit.dj = round2((hit.dj || 0) + djAmt);
-          hit.djStaff = djStaff;
-          hit.notes.push(djNote);
-        } else {
-          merged.push({
-            staffId: djStaff, zhiming: 0, waitdai: 0, baojian: 0, room: 0, gift: 0, champ: 0, special: 0, giftx: 0, tip: 0,
-            AS: djAmt, AG: 0, M: djAmt, N: 0, P: 0, Q: djAmt, Qauto: djAmt, manual: 0, mults: { 1: 1 }, multKeys: [1],
-            count: 1, notes: [djNote], ts: "", synthetic: true, dj: djAmt, djStaff: djStaff
-          });
-        }
+    // 香槟塔 → DJ 分成：按每条结账记录保存的分成快照汇总。
+    var djBuckets = {}, djOrder = [];
+    list.forEach(function (r) {
+      if (isInactiveRecord(r)) return;
+      var dj = recordChampDj(r, cfg);
+      if (dj.count <= 0) return;
+      var bucket = djBuckets[dj.staffId];
+      if (!bucket) {
+        bucket = djBuckets[dj.staffId] = { staffId: dj.staffId, champ: 0, amount: 0, notes: [] };
+        djOrder.push(dj.staffId);
+      }
+      bucket.champ = round2(bucket.champ + dj.count);
+      bucket.amount = round2(bucket.amount + dj.amount);
+      bucket.notes.push("香槟塔自动分成：×" + dj.count + " × " + dj.rate);
+    });
+    djOrder.forEach(function (djStaff) {
+      var bucket = djBuckets[djStaff];
+      var djAmt = bucket.amount;
+      var hit = null;
+      for (var mi = 0; mi < merged.length; mi++) { if (merged[mi].staffId === djStaff) { hit = merged[mi]; break; } }
+      if (hit) {
+        hit.AS = round2(hit.AS + djAmt);
+        hit.M = round2(hit.M + djAmt);
+        hit.Q = round2(hit.Q + djAmt);
+        hit.Qauto = round2((hit.Qauto || 0) + djAmt);
+        hit.dj = round2((hit.dj || 0) + djAmt);
+        hit.djStaff = djStaff;
+        hit.notes = (hit.notes || []).concat(bucket.notes);
       } else {
         merged.push({
-          staffId: "DJ", zhiming: 0, waitdai: 0, baojian: 0, room: 0, gift: 0, champ: totalChamp, special: 0, giftx: 0, tip: 0,
+          staffId: djStaff, zhiming: 0, waitdai: 0, baojian: 0, room: 0, gift: 0, champ: bucket.champ, special: 0, giftx: 0, tip: 0,
           AS: djAmt, AG: 0, M: djAmt, N: 0, P: 0, Q: djAmt, Qauto: djAmt, manual: 0, mults: { 1: 1 }, multKeys: [1],
-          count: 1, notes: [djNote], ts: "", synthetic: true, dj: djAmt
+          count: 1, notes: bucket.notes, ts: "", synthetic: true, dj: djAmt, djStaff: djStaff
         });
       }
-    }
+    });
     return { rows: rows, merged: merged };
   }
 
@@ -4145,6 +4232,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     var sold = {}, settled = {};
     CONFIG.items.forEach(function (it) { sold[it.key] = 0; settled[it.key] = 0; });
     (sales || []).forEach(function (s) {
+      if (isInactiveRecord(s)) return;
       var c = computeSale(s);
       if (!c.item) return;
       c.lines.forEach(function (l) { sold[l.key] = round2((sold[l.key] || 0) + l.units); });
@@ -4152,7 +4240,8 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       if (c.item.noToken) sold[c.item.key] = round2((sold[c.item.key] || 0) + (+c.units || 0));
     });
     (settlements || []).forEach(function (r) {
-      UNIT_FIELDS.forEach(function (k) { settled[k] = round2((settled[k] || 0) + (+r[k] || 0)); });
+      if (isInactiveRecord(r)) return;
+      UNIT_FIELDS.forEach(function (k) { settled[k] = round2((settled[k] || 0) + nonNegative(r[k])); });
     });
     var stock = CONFIG.items.map(function (it) {
       var s = sold[it.key] || 0, x = settled[it.key] || 0;
@@ -4161,7 +4250,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       return {
         key: it.key, biz: it.biz, unit: it.unit, price: it.price, kind: it.kind, countable: true, noToken: !!it.noToken,
         sold: s, settled: x,
-        unsettled: round2(s - x)
+        unsettled: Math.max(0, round2(s - x))
       };
     });
     return { stock: stock, sold: sold, settled: settled };
@@ -4178,13 +4267,73 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
      理由：卖出的钱是当场收的，但这笔交易还没完结 —— 客人可能拿回来退款（按售价退），
      也可能店员交回后付他结算价。按售价整笔预留，未收回的那部分利润就不进当期损益，
      等交回/结算的那一期再体现；万一发生退款，账面也不会虚增。 */
-  function unsettledRate(it, cfg) { return +it.price || 0; }
+  function unsettledRate(it, cfg) { return nonNegative(it.price); }
+
+  function reconciliationDetail(sales, settlements, cfg) {
+    var settledByKey = aggregate(sales, settlements, cfg).settled;
+    var groups = {}, order = [];
+    (sales || []).forEach(function (sale) {
+      if (isInactiveRecord(sale)) return;
+      var computed = computeSale(sale);
+      if (!computed.item || computed.item.noToken) return;
+      var unitPrice = nonNegative(computed.item.price);
+      computed.lines.forEach(function (line) {
+        var count = nonNegative(line.units);
+        if (!line.key || count <= 0) return;
+        if (!groups[line.key]) {
+          groups[line.key] = {
+            key: line.key, biz: computed.item.biz, unit: computed.item.unit || "",
+            entries: [], sold: 0
+          };
+          order.push(line.key);
+        }
+        groups[line.key].entries.push({ count: count, price: unitPrice });
+        groups[line.key].sold = round2(groups[line.key].sold + count);
+      });
+    });
+    var details = [], over = [];
+    order.forEach(function (key) {
+      var group = groups[key];
+      var remainingSettled = nonNegative(settledByKey[key]);
+      group.entries.forEach(function (entry) {
+        var consumed = Math.min(entry.count, remainingSettled);
+        remainingSettled = round2(remainingSettled - consumed);
+        var count = round2(entry.count - consumed);
+        if (count > 0) {
+          details.push({
+            key: key, biz: group.biz, unit: group.unit, count: count, price: entry.price,
+            amount: entry.price > 0 ? round2(count * entry.price) : 0,
+            mode: unsettledMode(cfg)
+          });
+        }
+      });
+      var excess = Math.max(0, round2(nonNegative(settledByKey[key]) - group.sold));
+      if (excess > 0) {
+        var lastPrice = group.entries.length ? group.entries[group.entries.length - 1].price : 0;
+        over.push({
+          biz: group.biz, unit: group.unit, count: excess, price: lastPrice,
+          amount: round2(excess * lastPrice)
+        });
+      }
+    });
+    // 没有任何出售、但历史结算里出现回收数量的项目，也要作为超额异常留痕。
+    Object.keys(settledByKey).forEach(function (key) {
+      if (groups[key]) return;
+      var count = nonNegative(settledByKey[key]);
+      if (count <= 0) return;
+      var it = itemByKey(key);
+      if (!it || it.noToken) return;
+      var price = unsettledRate(it, cfg);
+      over.push({ biz: it.biz, unit: it.unit || "", count: count, price: price, amount: round2(count * price) });
+    });
+    return { details: details, over: over };
+  }
 
   function report(sales, settlements, cfg) {
     cfg = cfg || CONFIG;
     var agg = aggregate(sales, settlements, cfg);
     var revenue = 0;
-    (sales || []).forEach(function (s) { revenue += computeSale(s).price; });
+    (sales || []).forEach(function (s) { if (!isInactiveRecord(s)) revenue += computeSale(s).price; });
     revenue = round2(revenue);
 
     var allS = computeAll(settlements, cfg);
@@ -4192,18 +4341,10 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     allS.merged.forEach(function (m) { staffCost += m.Q; });
     staffCost = round2(staffCost);
 
-    var unsettledAmount = 0, unsettledDetail = [];
-    CONFIG.items.forEach(function (it) {
-      if (!it.price) return;   // 无固定单价（定制礼品）不计入金额
-      if (it.noToken) return;  // 香槟塔无信物，不参与未结算勾稽
-      var row = agg.stock.filter(function (s) { return s.key === it.key; })[0];
-      if (!row) return;
-      var rate = unsettledRate(it, cfg);
-      var amt = round2(row.unsettled * rate);
-      unsettledAmount += amt;
-      unsettledDetail.push({ biz: it.biz, unit: it.unit, count: row.unsettled, price: rate, amount: amt, mode: unsettledMode(cfg) });
-    });
-    unsettledAmount = round2(unsettledAmount);
+    var reconciliation = reconciliationDetail(sales, settlements, cfg);
+    var unsettledDetail = reconciliation.details;
+    var overSettledDetail = reconciliation.over;
+    var unsettledAmount = round2(unsettledDetail.reduce(function (sum, row) { return sum + row.amount; }, 0));
 
     var soldUnits = 0;
     CONFIG.items.forEach(function (it) { soldUnits += agg.sold[it.key] || 0; });   // 含香槟塔的台数
@@ -4214,7 +4355,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
        · 按利润分配           → 当期利润 × 利润分配比例
          当期利润 = 营业收入 − 店员工资成本 − 未结算金额（未扣前台自己那份，避免循环） */
     var frontMode = wageMode(cfg);
-    var frontBase = +cfg.frontdeskBase || 0, frontPer = +cfg.frontdeskPerUnit || 0, frontShare = +cfg.frontdeskShare || 0;
+    var frontBase = nonNegative(cfg.frontdeskBase), frontPer = nonNegative(cfg.frontdeskPerUnit), frontShare = nonNegative(cfg.frontdeskShare);
     /* 分配基数下限 0：如果这个场次"收入 − 店员 − 未结算"是负数（未收回的信物比收入还多），
        前台不该倒扣钱，按 0 算。 */
     var frontProfitBase = Math.max(0, round2(revenue - staffCost - unsettledAmount));
@@ -4232,7 +4373,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       agg: agg, revenue: revenue, staffCost: staffCost, frontCost: frontCost,
       frontMode: frontMode, frontBase: frontBase, frontPer: frontPer, frontShare: frontShare,
       frontProfitBase: frontProfitBase, frontUnits: soldUnits, frontIsBoss: frontIsBoss,
-      unsettledAmount: unsettledAmount, unsettledDetail: unsettledDetail,
+      unsettledAmount: unsettledAmount, unsettledDetail: unsettledDetail, overSettledDetail: overSettledDetail,
       grossProfit: grossProfit, netProfit: netProfit
     };
   }
@@ -4321,6 +4462,10 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     cfg = cfg || CONFIG;
     var agg = aggregate(sales, settlements, cfg);
     var rep = report(sales, settlements, cfg);
+    var unsettledAmountByKey = {};
+    rep.unsettledDetail.forEach(function (row) {
+      unsettledAmountByKey[row.key] = round2((unsettledAmountByKey[row.key] || 0) + row.amount);
+    });
 
     var s1 = [["序号", "购买人ID", "业务内容", "客人数", "店员数", "时间/h", "信物数量", "价格w", "备注", "时间"]];
     (sales || []).forEach(function (s, i) {
@@ -4344,7 +4489,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       if (!it || it.derive) return;                          // 派生汇总项不单列库存
       var noTok = !!it.noToken;                              // 香槟塔：只显示卖了几座，不做信物回收勾稽
       if (!noTok && UNIT_FIELDS.indexOf(r.key) < 0) return;  // 按金额结算的项目也不进这张表
-      var amt = (noTok || !r.price) ? "" : round2(r.unsettled * unsettledRate(it, cfg));
+      var amt = (noTok || !r.price) ? "" : (unsettledAmountByKey[r.key] || 0);
       s3.push([r.biz, r.unit, r.price, r.sold, noTok ? "" : r.settled, noTok ? "" : r.unsettled, amt]);
     });
 
@@ -4373,6 +4518,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     var s1m = [["序号", "购买人ID", "业务内容", "客人数", "店员数", "时间/h", "信物数量", "价格w", "备注", "时间"]];
     var g1 = {}, o1 = [];
     (sales || []).forEach(function (s) {
+      if (isInactiveRecord(s)) return;
       var k = String(s.buyer || "").trim() || "(未填)";
       if (!g1[k]) { g1[k] = []; o1.push(k); }
       g1[k].push(s);
@@ -4419,6 +4565,9 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   var api = {
     CONFIG: CONFIG, round2: round2, fmt: fmt, setItems: setItems, cloneItems: cloneItems,
     itemByKey: itemByKey, itemByBiz: itemByBiz, priceOfKey: priceOfKey, tokenOf: tokenOf, shareOf: shareOf, staffOf: staffOf, UNIT_FIELDS: UNIT_FIELDS,
+    isInactiveRecord: isInactiveRecord, snapshotSaleRecord: snapshotSaleRecord,
+    settlementSnapshot: settlementSnapshot, snapshotSettlementRecord: snapshotSettlementRecord,
+    recordChampDj: recordChampDj,
     computeSale: computeSale, quickReply: quickReply, saleLineText: saleLineText,
     computeSettlement: computeSettlement, computeAll: computeAll, giftValue: giftValue,
     aggregate: aggregate, report: report,
@@ -4481,6 +4630,86 @@ function inpaDeleteButton(context, onclick, extraClass) {
     (context === "macro" || context === "roster" ? ' data-action="trash"' : "") +
     ' aria-label="删除" data-tip="删除" onclick="' + onclick + '">' + inpaUiIcon("trash") + '</button>';
 }
+
+function inpaAccountingGearIcon(){
+  return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path d="M9.5 2.8h5l.55 2.05 1.55.9 2.02-.62 2.5 4.33-1.52 1.51v1.8l1.52 1.51-2.5 4.33-2.02-.62-1.55.9-.55 2.05h-5l-.55-2.05-1.55-.9-2.02-.62-2.5-4.33 1.52-1.51v-1.8L2.88 9.46l2.5-4.33 2.02.62 1.55-.9z"></path>' +
+    '<circle cx="12" cy="12" r="3.15"></circle></svg>';
+}
+function inpaAccountingActionCell(context, id, rec){
+  if (INPACore.isInactiveRecord(rec)) {
+    return '<span class="inpa-record-status">' + (rec.status === "refund" ? "已退款" : "已作废") + '</span>';
+  }
+  return '<button type="button" class="inpa-icon-btn inpa-account-gear" aria-label="作废或退款" ' +
+    'data-tip="作废或退款" onclick="openAccountingRecordMenu(event,\'' + context + '\',' + (+id || 0) + ')">' +
+    inpaAccountingGearIcon() + '</button>';
+}
+function closeAccountingRecordMenu(){
+  var menu = document.getElementById("inpaAccountingRecordMenu");
+  if (!menu) return;
+  menu.style.display = "none";
+  menu.setAttribute("aria-hidden", "true");
+}
+function appendAccountingNote(rec, label, stamp){
+  var marker = "【" + label + " " + stamp + "】";
+  var old = String(rec.note || "").trim();
+  rec.note = old ? (old + " · " + marker) : marker;
+}
+function applyAccountingRecordAction(context, id, action){
+  var list = context === "sale" ? state.sales : state.settlements;
+  var rec = (list || []).filter(function(item){ return +item.id === +id; })[0];
+  if (!rec || INPACore.isInactiveRecord(rec)) return;
+  var label = action === "refund" ? "退款" : "作废";
+  inpaAsk("确认将这条记录标记为「" + label + "」？记录会保留为凭证，但不再影响库存和损益。", function(){
+    var stamp = nowStr();
+    rec.status = action === "refund" ? "refund" : "void";
+    rec.statusAt = stamp;
+    appendAccountingNote(rec, label, stamp);
+    save();
+    renderSales();
+    renderSettleTable();
+    renderReport();
+    toast("已标记为" + label + "，凭证已保留");
+  }, true);
+}
+function openAccountingRecordMenu(event, context, id){
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  var menu = document.getElementById("inpaAccountingRecordMenu");
+  if (!menu) {
+    menu = document.createElement("div");
+    menu.id = "inpaAccountingRecordMenu";
+    menu.setAttribute("role", "menu");
+    document.body.appendChild(menu);
+  }
+  menu.innerHTML =
+    '<button type="button" role="menuitem" data-record-action="void">作废</button>' +
+    '<button type="button" role="menuitem" data-record-action="refund">退款</button>';
+  Array.prototype.forEach.call(menu.querySelectorAll("[data-record-action]"), function(button){
+    button.onclick = function(clickEvent){
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+      closeAccountingRecordMenu();
+      applyAccountingRecordAction(context, id, button.getAttribute("data-record-action"));
+    };
+  });
+  menu.style.display = "block";
+  menu.setAttribute("aria-hidden", "false");
+  var rect = event && event.currentTarget ? event.currentTarget.getBoundingClientRect() : { right: 8, top: 8 };
+  var width = menu.offsetWidth || 132;
+  var height = menu.offsetHeight || 78;
+  var left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+  var top = rect.bottom + 6;
+  if (!Number.isFinite(top)) top = rect.top + 6;
+  if (top + height > window.innerHeight - 8 && rect.top > height + 12) top = rect.top - height - 6;
+  menu.style.left = left + "px";
+  menu.style.top = Math.max(8, top) + "px";
+}
+document.addEventListener("mousedown", function(event){
+  var menu = document.getElementById("inpaAccountingRecordMenu");
+  if (!menu || menu.style.display !== "block") return;
+  if (menu.contains(event.target) || (event.target.closest && event.target.closest(".inpa-account-gear"))) return;
+  closeAccountingRecordMenu();
+});
 
 /* 每个店铺一套本地键：同一个浏览器里（游戏内窗口都是 127.0.0.1:18500）两版不能互相读到对方的数据 */
 var STORE_KEY = "inpa_frontdesk_v1::" + INPACore.CONFIG.shop;
@@ -4675,11 +4904,16 @@ function ensureSessionStarted(){
   state.session.startedAt = nowStr();
   return true;
 }
+function snapshotCurrentAccountingRecords(target){
+  target = target || state;
+  (target.sales || []).forEach(function(rec){ INPACore.snapshotSaleRecord(rec); });
+  (target.settlements || []).forEach(function(rec){ INPACore.snapshotSettlementRecord(rec, INPACore.CONFIG); });
+}
 function save(){ ensureSessionStarted(); try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 function load(){
   try{
     var raw = localStorage.getItem(STORE_KEY);
-    if(raw){ state = Object.assign(state, migrate(JSON.parse(raw))); INPACore.setItems(state.items); applyCfg(); }
+    if(raw){ state = Object.assign(state, migrate(JSON.parse(raw))); INPACore.setItems(state.items); applyCfg(); snapshotCurrentAccountingRecords(state); }
     else { state.roster = []; state.macros = seedMacros(); }
   }catch(e){ state.roster = []; state.macros = seedMacros(); }
 }
@@ -4874,6 +5108,7 @@ function copyQuote(){ copyText($("#posQuote").innerText, {target:$("#posQuote")}
 function addSale(){
   var s = collectSale(); if(!s || !s.biz) return;
   if(!s.buyer){ toast("请填写购买人ID后再记入流水"); return; }
+  INPACore.snapshotSaleRecord(s);
   s.ts = nowStr(); s.id = state.seqSale++;
   state.sales.push(s); save();
   renderSales(); renderSettleTable(); renderReport();
@@ -4887,17 +5122,19 @@ function __inpaOrig_renderSales(){
   if(!state.sales.length){ body += "<tr><td colspan='13' class='muted'>暂无记录</td></tr>"; }
   state.sales.forEach(function(s,i){
     var c = INPACore.computeSale(s);
-    body += "<tr><td>"+(i+1)+"</td><td>"+esc(s.buyer)+"</td><td>"+esc(s.biz)+"</td>"+
+    var inactive = INPACore.isInactiveRecord(s);
+    body += "<tr"+(inactive?" class='inpa-record-inactive'":"")+"><td>"+(i+1)+"</td><td>"+esc(s.buyer)+"</td><td>"+esc(s.biz)+"</td>"+
       "<td class='num'>"+(s.guests||"")+"</td><td class='num'>"+(s.staff||"")+"</td><td class='num'>"+(s.hours||"")+"</td>"+
-      "<td>"+esc(INPACore.saleLineText(c) || "—")+"</td><td><button class='btn mini ghost' onclick='inpaTrade("+s.id+")'>交易</button></td><td class='num'>"+money(c.price)+"</td><td class='num inpa-recv' data-sid='"+s.id+"'>—</td><td class='muted'>"+esc(s.ts||"")+"</td>"+
+      "<td>"+esc(INPACore.saleLineText(c) || "—")+"</td><td>"+(inactive?'<span class="inpa-record-status">'+(s.status==="refund"?"已退款":"已作废")+'</span>':"<button class='btn mini ghost' onclick='inpaTrade("+s.id+")'>交易</button>")+"</td><td class='num'>"+money(c.price)+"</td><td class='num inpa-recv' data-sid='"+s.id+"'>—</td><td class='muted'>"+esc(s.ts||"")+"</td>"+
       ""+
       "<td class='muted'>"+esc(s.note)+"</td>"+
-      "<td>"+inpaDeleteButton("sale", "delSale("+s.id+")")+"</td></tr>";
+      "<td>"+inpaAccountingActionCell("sale", s.id, s)+"</td></tr>";
   });
   body += "</tbody>";
   $("#saleTable").innerHTML = head + body;
-  var rev = state.sales.reduce(function(a,s){return a+INPACore.computeSale(s).price;},0);
-  $("#saleCount").innerText = "（"+state.sales.length+" 笔，合计 "+money(rev)+" 万）";
+  var activeSales = state.sales.filter(function(s){ return !INPACore.isInactiveRecord(s); });
+  var rev = activeSales.reduce(function(a,s){return a+INPACore.computeSale(s).price;},0);
+  $("#saleCount").innerText = "（有效 "+activeSales.length+" 笔 / 共 "+state.sales.length+" 笔，合计 "+money(rev)+" 万）";
 }
 function copySaleReply(id, btn){ var s = state.sales.filter(function(x){return x.id===id;})[0]; if(s) copyText(INPACore.quickReply(s), {target:btn}); }
 function delSale(id){
@@ -5194,13 +5431,14 @@ function __inpaOrig_settleCols(withDel){
 }
 function settleRow(idx, r, v, multLabel, delId){ if(!window.__inpaWrapRow) return __inpaOrig_settleRow(idx, r, v, multLabel, delId); return window.__inpaWrapRow(__inpaOrig_settleRow, arguments); }
 function __inpaOrig_settleRow(idx, r, v, multLabel, delId){
-  return "<tr><td>"+idx+"</td><td>"+esc(r.staffId)+"</td>"+
+  var inactive = INPACore.isInactiveRecord(r);
+  return "<tr"+(inactive?" class='inpa-record-inactive'":"")+"><td>"+idx+"</td><td>"+esc(r.staffId)+"</td>"+
     "<td class='num'>"+(r.zhiming||0)+"</td><td class='num'>"+(r.waitdai||0)+"</td><td class='num'>"+(r.baojian||0)+"</td><td class='num'>"+(r.gift||0)+"</td>"+
     "<td class='num'>"+(r.special||0)+"</td><td class='num'>"+(r.giftx||0)+"</td><td class='num'>"+(r.tip||0)+"</td>"+
     "<td class='num'>"+money(v.AS)+"</td><td class='num'>"+money(v.AG)+"</td><td class='num'>"+money(v.M)+"</td>"+
     "<td class='num'>"+v.N+"</td><td class='num'>"+multLabel+"</td><td class='num'>"+money(v.P)+"</td>"+
     "<td class='num'><b>"+money(v.Q)+"</b></td><td class='muted'>"+esc(r._notes||"")+"</td>"+
-    (delId!==undefined?"<td>"+inpaDeleteButton("settlement", "delStl("+delId+")")+"</td>":"")+
+    (delId!==undefined?"<td>"+inpaAccountingActionCell("settlement", delId, r)+"</td>":"")+
     "</tr>";
 }
 function renderSettleTable(){ var _r = __inpaOrig_renderSettleTable.apply(this, arguments); try{ if(window.__inpaAfter_renderSettleTable) window.__inpaAfter_renderSettleTable(); }catch(e){} return _r; }
@@ -5211,12 +5449,13 @@ function __inpaOrig_renderSettleTable(){
   state.settlements.forEach(function(r,i){
     r._notes = r.note||"";
     br += settleRow(i+1, r, all.rows[i], (+r.mult||1), r.id);
-    rawPay += all.rows[i].Q;
-    // 香槟塔 → 该条结账记录下方同步生成一条 DJ 记录（删除该条时随之消失）
-    if((+r.champ||0) > 0){
-      var djQ = INPACore.round2((+r.champ||0) * INPACore.CONFIG.champDj);
+    if(!INPACore.isInactiveRecord(r)) rawPay += all.rows[i].Q;
+    // 香槟塔 → 该条结账记录下方同步生成一条 DJ 记录（作废或退款后不再计入）
+    if(!INPACore.isInactiveRecord(r) && (+r.champ||0) > 0){
+      var dj = INPACore.recordChampDj(r, INPACore.CONFIG);
+      var djQ = dj.amount;
       rawPay += djQ;
-      var djRec = { staffId:(INPACore.CONFIG.djStaff||"DJ"), zhiming:0, waitdai:0, baojian:0, gift:0, champ:(+r.champ||0),
+      var djRec = { staffId:dj.staffId, zhiming:0, waitdai:0, baojian:0, gift:0, champ:dj.count,
         special:0, giftx:0, tip:0, _notes:"香槟塔自动分成（绑定第"+(i+1)+"条）" };
       br += settleRow("↳", djRec, { AS: djQ, AG: 0, M: djQ, N: 0, P: 0, Q: djQ }, "1", undefined);
     }
@@ -5224,7 +5463,8 @@ function __inpaOrig_renderSettleTable(){
   br += "</tbody>";
   $("#stlTableRaw").innerHTML = settleCols(true) + br;
   rawPay = INPACore.round2(rawPay);
-  $("#stlCountRaw").innerText = "（"+state.settlements.length+" 笔，合计工资 "+money(rawPay)+" 万）";
+  var activeCount = state.settlements.filter(function(r){ return !INPACore.isInactiveRecord(r); }).length;
+  $("#stlCountRaw").innerText = "（有效 "+activeCount+" 笔 / 共 "+state.settlements.length+" 笔，合计工资 "+money(rawPay)+" 万）";
 
   var merged = all.merged;
   var bm = "<tbody>";
@@ -5241,8 +5481,32 @@ function __inpaOrig_renderSettleTable(){
   if(box) box.innerHTML = "📎 库存勾稽（未结算 = 已售出 − 已结账回收，即还在客人手中、尚未交回前台的部分）：" + parts.join("　|　");
 }
 function addSettlement(){ var __r = __inpaOrig_addSettlement.apply(this, arguments); try { if (window.__inpaAfter_addSettlement) window.__inpaAfter_addSettlement(); } catch (e) { } return __r; }
+function settlementInputError(r){
+  var amountFields = [["zhiming","指名"],["waitdai","外带"],["baojian","包间"],["gift","礼品"],
+    ["champ","香槟塔"],["special","特殊服务"],["giftx","定制礼品"],["tip","定制打赏"],["base","底薪"]];
+  for (var i = 0; i < amountFields.length; i++){
+    var value = +r[amountFields[i][0]];
+    if (!Number.isFinite(value) || value < 0) return "「" + amountFields[i][1] + "」不能为负数";
+  }
+  if (!Number.isFinite(+r.mult) || +r.mult < 1) return "奖励倍数必须至少为 1";
+  var stock = INPACore.aggregate(state.sales, state.settlements).stock;
+  for (var j = 0; j < INPACore.UNIT_FIELDS.length; j++){
+    var unitKey = INPACore.UNIT_FIELDS[j];
+    var quantity = +r[unitKey] || 0;
+    if (quantity <= 0) continue;
+    var row = stock.filter(function(x){ return x.key === unitKey; })[0];
+    var remaining = row ? Math.max(0, +row.unsettled || 0) : 0;
+    if (quantity > remaining + 1e-9){
+      var item = INPACore.itemByKey(unitKey);
+      return "「" + (item ? item.biz : unitKey) + "」回收 " + quantity + " 个，超过未结算数量（最多 " + remaining + " 个）";
+    }
+  }
+  return "";
+}
 function __inpaOrig_addSettlement(){
   var r = collectStl(); if(!r.staffId){ toast("请填写店员ID"); return; }
+  var inputError = settlementInputError(r);
+  if(inputError){ toast(inputError); return; }
   var dupBase = state.settlements.some(function(x){ return x.staffId === r.staffId && (+x.base||0) > 0; });
   if(dupBase && (+r.base||0) > 0){
     toast("【"+r.staffId+"】本场已有底薪记录（底薪每场仅一次），无法重复录入");
@@ -5255,6 +5519,7 @@ function __inpaOrig_addSettlement(){
     return;
   }
   r.ts = nowStr(); r.id = state.seqStl++;
+  INPACore.snapshotSettlementRecord(r, INPACore.CONFIG);
   var dup = state.settlements.some(function(x){ return x.staffId === r.staffId; });
   state.settlements.push(r); save();
   renderSettleTable(); renderReport(); renderStlCalc();
@@ -5275,7 +5540,12 @@ function delStl(id){
 
 /* ================= 报表 ================= */
 function renderRecon(){
-  var agg = INPACore.aggregate(state.sales, state.settlements);
+  var rep = INPACore.report(state.sales, state.settlements);
+  var agg = rep.agg;
+  var unsettledAmountByKey = {};
+  rep.unsettledDetail.forEach(function(row){
+    unsettledAmountByKey[row.key] = INPACore.round2((unsettledAmountByKey[row.key] || 0) + row.amount);
+  });
   var h = "<thead><tr><th>业务内容</th><th>计量单位</th><th class='num'>单价w</th><th class='num'>售出</th><th class='num'>结账回收</th><th class='num'>未结算</th><th class='num'>未结算金额w</th></tr></thead>";
   var b = "<tbody>";
   agg.stock.forEach(function(r){
@@ -5283,7 +5553,7 @@ function renderRecon(){
     if (!it || it.derive) return;                       // 派生汇总项不单列库存
     var noTok = !!it.noToken;                            // 香槟塔：只显示卖出数量，不做信物回收勾稽
     if (!noTok && INPACore.UNIT_FIELDS.indexOf(r.key) < 0) return;
-    var amt = (noTok || !r.price) ? "—" : money(r.unsettled * INPACore.unsettledRate(it, INPACore.CONFIG));
+    var amt = (noTok || !r.price) ? "—" : money(unsettledAmountByKey[r.key] || 0);
     b += "<tr><td>"+esc(r.biz)+"</td><td>"+esc(r.unit)+"</td><td class='num'>"+(r.price||"—")+"</td>"+
       "<td class='num'>"+r.sold+"</td><td class='num'>"+(noTok?"—":r.settled)+"</td>"+
       "<td class='num'><b>"+(noTok?"—":r.unsettled)+"</b></td><td class='num'>"+amt+"</td></tr>";
@@ -5357,8 +5627,12 @@ function renderReport(){
     '<div class="kv um-row um-head"><span>业务内容</span><span>未结算 × 售价</span><span>金额w</span></div>' +
     (rep.unsettledDetail.length ? rep.unsettledDetail.map(function(d){
       return '<div class="kv um-row"><span>'+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
-    }).join("") : '<div class="muted">暂无数据</div>') +
+    }).join("") : ((rep.overSettledDetail || []).length ? '' : '<div class="muted">暂无数据</div>')) +
+    ((rep.overSettledDetail || []).map(function(d){
+      return '<div class="kv um-row inpa-over-row"><span>异常 · 超额回收 · '+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
+    }).join("")) +
     '<div class="kv um-row um-total"><span>合计</span><span></span><b>'+money(rep.unsettledAmount)+'</b></div>' +
+    ((rep.overSettledDetail || []).length ? '<div class="muted" style="margin-top:6px;color:var(--fd-warn)">超额回收仅作为异常凭证展示，不抵扣未结算，也不参与损益计算。</div>' : '') +
     '<div class="muted" style="margin-top:8px">' +
       '未结算信物按【售价】预留（没收回的那部分利润不进当期损益，等交回后体现）。' +
       ' 前台工资 = ' + (um === "wage"
@@ -6557,6 +6831,9 @@ renderAll();
            离线时没插件就没法交易，直接收起来，跟其它"需要游戏"的按钮一致 */
         document.querySelectorAll(".inpa-target-btn,.inpa-send-btn,.inpa-stop-btn,#inpaSendBtn,.inpa-pick,.inpa-trade-btn,.inpa-pay-btn"),
         function (b) { offlineLook(b, !online); });
+      Array.prototype.forEach.call(
+        document.querySelectorAll(".inpa-item-status[data-unbound-status='1']"),
+        function (status) { status.style.display = online ? "" : "none"; });
     } catch (e) { }
   }
   /* 结账页的两个结账按钮：在线时上下两个（自动 / 手动）并带提示；
@@ -7526,12 +7803,19 @@ renderAll();
  window.__inpaExtraSettle = function (rec) {
     var as = 0;
     if (!rec) return { as: 0 };
+    var snap = rec.settlementSnapshot || {};
+    function snapValue(map, key, fallback) {
+      if (map && Object.prototype.hasOwnProperty.call(map, key)) return Math.max(0, +map[key] || 0);
+      return Math.max(0, +fallback || 0);
+    }
     itemsArr().forEach(function (it) {
       if (!it || it.derive) return;
       if (SETTLED_KEYS.indexOf(it.key) >= 0) return;   // 已经写进原公式的跳过，避免重复
       var n = (+rec[it.key]) || 0;
       if (!n) return;
-      as += (it.share != null) ? n * ((+it.share) || 0) : n * ((+it.staff) || 0);
+      as += (it.share != null)
+        ? n * snapValue(snap.shares, it.key, it.share)
+        : n * snapValue(snap.rates, it.key, it.staff);
     });
     return { as: Math.round(as * 100) / 100 };
   };
@@ -7561,6 +7845,9 @@ renderAll();
   }
 
   /* ---------- 设置页：把行变可编辑 + 每行一个删 ---------- */
+  function isProtectedPriceItem(it) {
+    return !!(it && it.key === "giftx");
+  }
   function decoratePriceRows() {
     var table = q("#settingsTable");
     if (!table) return;
@@ -7599,6 +7886,11 @@ renderAll();
       td.className = "num";
       if (items[i].derive) {
         td.innerHTML = "<span class='muted'>规则项</span>";
+        row.appendChild(td);
+        return;
+      }
+      if (isProtectedPriceItem(items[i])) {
+        td.textContent = "";
         row.appendChild(td);
         return;
       }
@@ -7697,6 +7989,7 @@ renderAll();
     var it = items[i];
     if (!it) return;
     if (it.derive) { tst("「" + it.biz + "」是规则项目，只能改名，不能删除"); return; }
+    if (isProtectedPriceItem(it)) { tst("「" + it.biz + "」是固定项目，不能删除"); return; }
     inpaAsk("删除项目「" + it.biz + "」？\n\n已经产生的流水不受影响，报表里仍然保留。", function () {
 
     try { if (typeof applySettingsFromDOM === "function") applySettingsFromDOM(); } catch (e) { }
@@ -8048,7 +8341,8 @@ renderAll();
         " value=\"" + curName.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + "\"" +
         " placeholder='信物名称' style='min-width:0;width:100%;text-align:left'>" +
         "</div>" +
-        "<div class='muted inpa-item-status' style='font-size:12px;margin-top:2px'>" +
+        "<div class='muted inpa-item-status' data-unbound-status='" + (bindings.length ? "0" : "1") +
+        "' style='font-size:12px;margin-top:2px;display:" + ((!online && !bindings.length) ? "none" : "") + "'>" +
         (bindings.length ? ("已绑物品：" + esch(bindings.map(function(x){ return x.name; }).join("、"))) : "未绑物品（交易时手动放）") + "</div>";
       var pickBtn = cell.querySelector(".inpa-pick");
       /* 在线时的说明：绑定背包物品 → 可用「交易」自动交付；名称与绑定物品不一致会自动解绑 */
@@ -8186,6 +8480,8 @@ renderAll();
     /* 与 addSettlement 相同的校验，保证数据一致（底薪每场一次、定制礼品↔定制打赏成对） */
     var r = collectStl();
     if (!r.staffId) { toast("请填写店员ID"); var el0 = q("#stlStaff"); if (el0) el0.focus(); return; }
+    var inputError = settlementInputError(r);
+    if (inputError) { toast(inputError); return; }
     var dupBase = state.settlements.some(function (x) { return x.staffId === r.staffId && (+x.base || 0) > 0; });
     if (dupBase && (+r.base || 0) > 0) {
       toast("【" + r.staffId + "】本场已有底薪记录（底薪每场仅一次）。手动结账请把「底薪」改成 0 再记。");
@@ -8197,6 +8493,7 @@ renderAll();
       return;
     }
     r.ts = nowStr(); r.id = state.seqStl++;
+    INPACore.snapshotSettlementRecord(r, INPACore.CONFIG);
     r.manual = 1;                                   // 只多这一个标记：付款走线下，不参与「交易」
     r.note = (r.note ? (r.note + " · ") : "") + "手动结账";
     state.settlements.push(r); save();
@@ -8699,6 +8996,67 @@ renderAll();
   
   function localRaw() { try { return localStorage.getItem(DATA_KEY); } catch (e) { return null; } }
   function sameJson(a, b) { try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; } }
+  function cloneData(v) { try { return v == null ? v : JSON.parse(JSON.stringify(v)); } catch (e) { return null; } }
+  function accountingSignature(kind, rec) {
+    if (!rec) return "";
+    if (kind === "sale") {
+      return JSON.stringify(["sale", rec.ts || "", rec.buyer || "", rec.biz || "", rec.key || "",
+        +rec.guests || 0, +rec.staff || 0, +rec.hours || 0, +rec.giftCount || 0, +rec.customAmount || 0]);
+    }
+    return JSON.stringify(["settlement", rec.ts || "", rec.staffId || "", +rec.zhiming || 0, +rec.waitdai || 0,
+      +rec.baojian || 0, +rec.gift || 0, +rec.champ || 0, +rec.special || 0, +rec.giftx || 0, +rec.tip || 0,
+      +rec.base || 0, +rec.mult || 1, rec.manual ? 1 : 0]);
+  }
+  function mergeAccountingList(kind, baseList, localList, remoteList) {
+    var out = (remoteList || []).map(cloneData);
+    var bySignature = {}, baseSignatures = {}, maxId = 0;
+    out.forEach(function(rec){
+      if (!rec) return;
+      bySignature[accountingSignature(kind, rec)] = rec;
+      maxId = Math.max(maxId, +rec.id || 0);
+    });
+    (baseList || []).forEach(function(rec){ if (rec) baseSignatures[accountingSignature(kind, rec)] = true; });
+    (localList || []).forEach(function(source){
+      if (!source) return;
+      var signature = accountingSignature(kind, source);
+      var remote = bySignature[signature];
+      if (remote) {
+        if (INPACore.isInactiveRecord(source) && !INPACore.isInactiveRecord(remote)) {
+          remote.status = source.status;
+          remote.statusAt = source.statusAt;
+          remote.note = source.note;
+        }
+        return;
+      }
+      if (baseSignatures[signature]) return;
+      var copy = cloneData(source);
+      if (out.some(function(rec){ return rec && +rec.id === +copy.id; })) {
+        maxId += 1;
+        copy.id = maxId;
+      } else {
+        maxId = Math.max(maxId, +copy.id || 0);
+      }
+      out.push(copy);
+      bySignature[signature] = copy;
+    });
+    return out;
+  }
+  function mergeConcurrentAccounting(localData, remoteData, baseData) {
+    if (!localData || !remoteData) return null;
+    if (baseData) {
+      var localOther = cloneData(localData), baseOther = cloneData(baseData);
+      [localOther, baseOther].forEach(function(data){
+        delete data.sales; delete data.settlements; delete data.seqSale; delete data.seqStl; delete data.session;
+      });
+      if (!sameJson(localOther, baseOther)) return null;
+    }
+    var merged = cloneData(remoteData);
+    merged.sales = mergeAccountingList("sale", baseData && baseData.sales, localData.sales, remoteData.sales);
+    merged.settlements = mergeAccountingList("settlement", baseData && baseData.settlements, localData.settlements, remoteData.settlements);
+    merged.seqSale = merged.sales.reduce(function(max, rec){ return Math.max(max, (+rec.id || 0) + 1); }, 1);
+    merged.seqStl = merged.settlements.reduce(function(max, rec){ return Math.max(max, (+rec.id || 0) + 1); }, 1);
+    return merged;
+  }
   function isBlank(d) { if (!d) return true; var n = 0; var ks = ["sales", "settlements", "reservations", "roster", "roomLog"]; for (var i = 0; i < ks.length; i++) { n += (d[ks[i]] && d[ks[i]].length) || 0; } return n === 0; }
   function pendingRead() {
     try {
@@ -8736,6 +9094,14 @@ renderAll();
       headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: JSON.stringify({ rev: rev, data: payload, force: !!force })
     }).then(function (r) { return r.json(); });
+  }
+  function withDataWriteLock(task) {
+    try {
+      if (navigator.locks && typeof navigator.locks.request === "function") {
+        return navigator.locks.request("inpa-frontdesk-state-write", task);
+      }
+    } catch (e) { }
+    return task();
   }
   
   function writeLocal(data) { try { localStorage.setItem(DATA_KEY, JSON.stringify(data)); } catch (e) { } }
@@ -9041,7 +9407,32 @@ renderAll();
         var snap = null;
         try { snap = JSON.stringify(window.state); } catch (e) { snap = null; }
         pendingWrite(dataRev, snap);
-        dataPut(dataRev, window.state).then(function (resp) {
+        withDataWriteLock(function () {
+          return dataGet().then(function (latest) {
+            if (!latest || !latest.ok) throw new Error("无法确认共用数据版本");
+            var latestRev = +latest.rev || 0;
+            if (latest.data != null && latestRev !== dataRev) {
+              if (sameJson(window.state, latest.data)) {
+                return { ok: true, rev: latestRev, adopted: true };
+              }
+              var baseData = null;
+              try { baseData = lastPushedSnap ? JSON.parse(lastPushedSnap) : null; } catch (e) { baseData = null; }
+              var mergedState = mergeConcurrentAccounting(window.state, latest.data, baseData);
+              if (mergedState) {
+                state = mergedState;
+                window.state = state;
+                snap = JSON.stringify(mergedState);
+                pendingWrite(latestRev, snap);
+                return dataPut(latestRev, mergedState).then(function (response) {
+                  if (response && response.ok) response.merged = true;
+                  return response;
+                });
+              }
+              return { ok: false, conflict: true, rev: latestRev, data: latest.data };
+            }
+            return dataPut(latestRev, window.state);
+          });
+        }).then(function (resp) {
           inFlight = false;
           if (resp && resp.ok) {
             dataRev = resp.rev;
@@ -9049,6 +9440,11 @@ renderAll();
             var pending = pendingRead();
             if (!pending || (snap != null && sameJson(pending.data, JSON.parse(snap)))) pendingClear();
             if (dataPending) { dataPending = false; paintDataTag(); }
+            if (resp.merged || resp.adopted) {
+              writeLocal(window.state);
+              tst(resp.merged ? "两个窗口同时新增的账目已合并，正在刷新…" : "共用数据已更新，正在刷新…");
+              setTimeout(function () { location.reload(); }, 220);
+            }
           } else if (resp && resp.conflict) {
             dataRev = resp.rev || 0;
             if (resp.data != null && sameJson(window.state, resp.data)) {
@@ -9057,8 +9453,33 @@ renderAll();
               pendingClear();
               dataPending = false; paintDataTag();
             } else {
-              stopped = true;                                 // 真要重载了：别再补发
-              adoptServer(resp.data, "另一个窗口刚改过，正在重新同步…");
+              var baseData = null;
+              try { baseData = lastPushedSnap ? JSON.parse(lastPushedSnap) : null; } catch (e) { baseData = null; }
+              var mergedState = mergeConcurrentAccounting(window.state, resp.data, baseData);
+              if (mergedState) {
+                stopped = true;
+                var mergedSnap = JSON.stringify(mergedState);
+                pendingWrite(resp.rev || 0, mergedSnap);
+                dataPut(resp.rev || 0, mergedState).then(function (mergedResp) {
+                  if (mergedResp && mergedResp.ok) {
+                    dataRev = +mergedResp.rev || 0;
+                    lastPushedSnap = mergedSnap;
+                    writeLocal(mergedState);
+                    pendingClear();
+                    dataPending = false;
+                    paintDataTag();
+                    tst("两个窗口同时新增的账目已合并，正在刷新…");
+                    setTimeout(function () { location.reload(); }, 220);
+                  } else {
+                    adoptServer((mergedResp && mergedResp.data) || resp.data, "并发数据再次冲突，正在重新同步…");
+                  }
+                }).catch(function () {
+                  adoptServer(resp.data, "并发数据暂时无法合并，正在重新同步…");
+                });
+              } else {
+                stopped = true;
+                adoptServer(resp.data, "另一个窗口刚改过，正在重新同步…");
+              }
             }
           }
           if (dirty && !stopped) push();                      // 期间又改过：用新 rev 再发一次
@@ -13049,6 +13470,7 @@ function installStaffSuggest() {
     if (!ready || mode === "launch") return;
     mode = "launch";
     launchStart = performance.now();
+    body.classList.add("inpa-boot-launching");
     square.classList.remove("ib-ready");
     markerOrbit.classList.remove("ib-flight-active");
     square.classList.add("ib-orbit-mode");
@@ -13075,6 +13497,7 @@ function installStaffSuggest() {
     context.clearRect(0, 0, window.innerWidth, window.innerHeight);
     lastClearBounds = null;
     lastGridPaint = 0;
+    body.classList.remove("inpa-boot-launching");
     body.classList.add("inpa-boot-active");
     body.classList.remove("inpa-boot-docked");
     modulesRevealed = false;

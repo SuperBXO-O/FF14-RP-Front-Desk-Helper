@@ -19,5 +19,6 @@ Run the open-source presentation checks before submitting a pull request:
 
 ```bash
 node --test tests/open-source-compliance.test.js
+node --test tests/accounting.test.js
 ```
 
