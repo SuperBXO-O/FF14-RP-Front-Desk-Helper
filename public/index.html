@@ -5420,6 +5420,34 @@ function isBrowsingwayWindow(){
   try { return /Browsingway\//i.test(navigator.userAgent || ""); }
   catch(e){ return false; }
 }
+function installBrowsingwayWheelGuard(){
+  if(!isBrowsingwayWindow() || document.__inpaWheelGuard) return;
+  document.__inpaWheelGuard = true;
+  document.addEventListener("wheel", function(event){
+    if(!event.ctrlKey) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    var delta = event.deltaY || 0;
+    if(event.deltaMode === 1) delta *= 18;
+    else if(event.deltaMode === 2) delta *= Math.max(200, window.innerHeight * 0.9);
+    var node = event.target;
+    var scrolled = false;
+    while(node && node !== document.body && node !== document.documentElement){
+      var style = window.getComputedStyle(node);
+      if(/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1){
+        var before = node.scrollTop;
+        node.scrollTop += delta;
+        if(node.scrollTop !== before){ scrolled = true; break; }
+      }
+      node = node.parentElement;
+    }
+    if(!scrolled){
+      var root = document.scrollingElement || document.documentElement;
+      root.scrollTop += delta;
+    }
+  }, { capture:true, passive:false });
+}
+installBrowsingwayWheelGuard();
 var posChoiceSerial = 0;
 function renderBizPills(){
   var box = $("#bizPills"); box.innerHTML = "";
@@ -5454,7 +5482,7 @@ function renderBizPills(){
     var choose = function(event){
       var nativeToggle = !!(event && (event.ctrlKey || event.metaKey));
       var serial = ++posChoiceSerial;
-      if(nativeToggle || !isBrowsingwayWindow()) {
+      if(!isBrowsingwayWindow()) {
         applyChoice(nativeToggle);
         return;
       }
@@ -5467,7 +5495,7 @@ function renderBizPills(){
         });
         return;
       }
-      applyChoice(false);
+      applyChoice(nativeToggle);
     };
     b.onclick = choose;
     b.onkeydown = function(event){
