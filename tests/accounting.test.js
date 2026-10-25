@@ -235,6 +235,31 @@ test("unsettled stock and amount reconcile without negative carry", () => {
   assert.equal(over.overSettledDetail[0].amount, 50, "over-returned exception amount");
 });
 
+test("over-returned tokens affect profit once through staff wages", () => {
+  const core = loadCore();
+  const cfg = Object.assign({}, core.CONFIG, {
+    baseSalary: 0,
+    settleMode: "profit",
+    frontdeskShare: 0
+  });
+  const sales = [
+    { biz: "指名（店内）", guests: 1, staff: 1, hours: 1 }
+  ];
+  const settlements = [{ staffId: "A", zhiming: 3, base: 0 }];
+  const report = core.report(sales, settlements, cfg);
+  close(report.revenue, 100, "over-return revenue");
+  close(report.staffCost, 120, "all returned tokens earn wages");
+  close(report.overSettledAmount, 50, "over-return exception amount");
+  close(report.frontProfitBase, 0, "profit share base floor");
+  close(report.grossProfit, -20, "gross profit after extra staff wage");
+  close(report.netProfit, -20, "net profit after extra staff wage");
+  close(
+    core.computeAll(settlements, cfg, sales).merged[0].Q,
+    120,
+    "over-returned token wage remains paid"
+  );
+});
+
 test("sale snapshots freeze price and item identity", () => {
   const core = loadCore();
   const sale = {

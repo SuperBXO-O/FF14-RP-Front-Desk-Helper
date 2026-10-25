@@ -4155,7 +4155,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     return { AS: AS, AG: AG, M: M, N: N, mult: mult, P: P, Q: Q };
   }
 
-  function computeAll(list, cfg) {
+  function computeAll(list, cfg, sales) {
     cfg = cfg || CONFIG;
     list = list || [];
     var groups = {}, order = [], rows = new Array(list.length);
@@ -4336,7 +4336,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     (sales || []).forEach(function (s) { if (!isInactiveRecord(s)) revenue += computeSale(s).price; });
     revenue = round2(revenue);
 
-    var allS = computeAll(settlements, cfg);
+    var allS = computeAll(settlements, cfg, sales);
     var staffCost = 0;
     allS.merged.forEach(function (m) { staffCost += m.Q; });
     staffCost = round2(staffCost);
@@ -4345,6 +4345,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     var unsettledDetail = reconciliation.details;
     var overSettledDetail = reconciliation.over;
     var unsettledAmount = round2(unsettledDetail.reduce(function (sum, row) { return sum + row.amount; }, 0));
+    var overSettledAmount = round2(overSettledDetail.reduce(function (sum, row) { return sum + row.amount; }, 0));
 
     var soldUnits = 0;
     CONFIG.items.forEach(function (it) { soldUnits += agg.sold[it.key] || 0; });   // 含香槟塔的台数
@@ -4373,7 +4374,8 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       agg: agg, revenue: revenue, staffCost: staffCost, frontCost: frontCost,
       frontMode: frontMode, frontBase: frontBase, frontPer: frontPer, frontShare: frontShare,
       frontProfitBase: frontProfitBase, frontUnits: soldUnits, frontIsBoss: frontIsBoss,
-      unsettledAmount: unsettledAmount, unsettledDetail: unsettledDetail, overSettledDetail: overSettledDetail,
+      unsettledAmount: unsettledAmount, unsettledDetail: unsettledDetail,
+      overSettledAmount: overSettledAmount, overSettledDetail: overSettledDetail,
       grossProfit: grossProfit, netProfit: netProfit
     };
   }
@@ -4476,7 +4478,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
 
     var s2 = [["序号", "店员ID", "指名(个/半小时)", "外带(个/半小时)", "包间(个/半小时)", "礼品(个)", "香槟塔(个)", "特殊服务(个/半小时)", "定制礼品(个)", "定制打赏(万)",
       "服务结算", "打赏结算", "合计", "底薪", "奖励倍数", "奖励金额", "工资总计", "备注", "时间"]];
-    var allS = computeAll(settlements, cfg);
+    var allS = computeAll(settlements, cfg, sales);
     (settlements || []).forEach(function (r, i) {
       var v = allS.rows[i] || computeSettlement(r, cfg);
       s2.push([i + 1, r.staffId || "", +r.zhiming || 0, +r.waitdai || 0, +r.baojian || 0, +r.gift || 0, +r.champ || 0, +r.special || 0,
@@ -4513,6 +4515,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     s4.push(["未结算金额", rep.unsettledAmount]);
     s4.push(["净利润", rep.netProfit]);
     rep.unsettledDetail.forEach(function (d) { s4.push(["  · " + d.biz + " 未结算", d.amount]); });
+    rep.overSettledDetail.forEach(function (d) { s4.push(["  · " + d.biz + " 超额回收", d.amount]); });
 
     // 出售记录-合并（按购买人）
     var s1m = [["序号", "购买人ID", "业务内容", "客人数", "店员数", "时间/h", "信物数量", "价格w", "备注", "时间"]];
@@ -4537,7 +4540,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     });
 
     // 结账记录-合并（按店员）
-    var allM = computeAll(settlements, cfg).merged;
+    var allM = computeAll(settlements, cfg, sales).merged;
     var s2m = [["序号", "店员ID", "指名(个/半小时)", "外带(个/半小时)", "包间(个/半小时)", "礼品(个)", "香槟塔(个)", "特殊服务(个/半小时)", "定制礼品(个)", "定制打赏(万)",
       "服务结算", "打赏结算", "合计", "底薪", "奖励倍数", "奖励金额", "工资总计", "备注", "时间"]];
     allM.forEach(function (m, i) {
@@ -5343,8 +5346,9 @@ function __inpaOrig_collectStl(){
 }
 function renderStlCalc(){
   var r = collectStl();
-  var hasBase = state.settlements.some(function(x){ return x.staffId === r.staffId && (+x.base||0) > 0; });
-  var v = INPACore.computeSettlement(r, INPACore.CONFIG);
+  var hasBase = state.settlements.some(function(x){ return !INPACore.isInactiveRecord(x) && x.staffId === r.staffId && (+x.base||0) > 0; });
+  var preview = INPACore.computeAll(state.settlements.concat([r]), INPACore.CONFIG, state.sales);
+  var v = preview.rows[preview.rows.length - 1] || INPACore.computeSettlement(r, INPACore.CONFIG);
   var warn = '';
   if(hasBase && (+r.base||0) > 0) warn += '<div style="margin-top:8px"><span class="tag warn">⚠ 该店员本场已录入底薪（每场仅一次），重复录入将被拒绝。</span></div>';
     if((+r.champ||0) > 0) warn += '<div style="margin-top:8px"><span class="tag ok">🍾 香槟塔 ×'+(+r.champ||0)+':店员 '+INPACore.CONFIG.champStaff+'w/座，另算 DJ 分成 '+((+r.champ||0)*INPACore.CONFIG.champDj)+'w（归在「'+(INPACore.CONFIG.djStaff||"DJ")+'」名下）。</span></div>';
@@ -5443,7 +5447,7 @@ function __inpaOrig_settleRow(idx, r, v, multLabel, delId){
 }
 function renderSettleTable(){ var _r = __inpaOrig_renderSettleTable.apply(this, arguments); try{ if(window.__inpaAfter_renderSettleTable) window.__inpaAfter_renderSettleTable(); }catch(e){} return _r; }
 function __inpaOrig_renderSettleTable(){
-  var all = INPACore.computeAll(state.settlements, INPACore.CONFIG);
+  var all = INPACore.computeAll(state.settlements, INPACore.CONFIG, state.sales);
   var br = "<tbody>", rawPay = 0;
   if(!state.settlements.length){ br += "<tr><td colspan='19' class='muted'>暂无记录</td></tr>"; }
   state.settlements.forEach(function(r,i){
@@ -5482,32 +5486,40 @@ function __inpaOrig_renderSettleTable(){
 }
 function addSettlement(){ var __r = __inpaOrig_addSettlement.apply(this, arguments); try { if (window.__inpaAfter_addSettlement) window.__inpaAfter_addSettlement(); } catch (e) { } return __r; }
 function settlementInputError(r){
+  var checked = {}, hasEntry = false;
+  function checkAmount(key, label){
+    if (checked[key]) return;
+    checked[key] = true;
+    var value = +r[key];
+    if (!Number.isFinite(value) || value < 0) return "「" + label + "」不能为负数";
+    if (value > 0) hasEntry = true;
+    return "";
+  }
   var amountFields = [["zhiming","指名"],["waitdai","外带"],["baojian","包间"],["gift","礼品"],
-    ["champ","香槟塔"],["special","特殊服务"],["giftx","定制礼品"],["tip","定制打赏"],["base","底薪"]];
+    ["champ","香槟塔"],["special","特殊服务"],["giftx","定制礼品"],["tip","定制打赏"]];
   for (var i = 0; i < amountFields.length; i++){
-    var value = +r[amountFields[i][0]];
-    if (!Number.isFinite(value) || value < 0) return "「" + amountFields[i][1] + "」不能为负数";
+    var error = checkAmount(amountFields[i][0], amountFields[i][1]);
+    if (error) return error;
   }
+  var items = INPACore.CONFIG.items || [];
+  for (var j = 0; j < items.length; j++){
+    var item = items[j];
+    if (!item || item.derive || !item.key) continue;
+    error = checkAmount(item.key, item.biz || item.key);
+    if (error) return error;
+  }
+  var base = +r.base;
+  if (!Number.isFinite(base) || base < 0) return "「底薪」不能为负数";
+  if (base > 0) hasEntry = true;
   if (!Number.isFinite(+r.mult) || +r.mult < 1) return "奖励倍数必须至少为 1";
-  var stock = INPACore.aggregate(state.sales, state.settlements).stock;
-  for (var j = 0; j < INPACore.UNIT_FIELDS.length; j++){
-    var unitKey = INPACore.UNIT_FIELDS[j];
-    var quantity = +r[unitKey] || 0;
-    if (quantity <= 0) continue;
-    var row = stock.filter(function(x){ return x.key === unitKey; })[0];
-    var remaining = row ? Math.max(0, +row.unsettled || 0) : 0;
-    if (quantity > remaining + 1e-9){
-      var item = INPACore.itemByKey(unitKey);
-      return "「" + (item ? item.biz : unitKey) + "」回收 " + quantity + " 个，超过未结算数量（最多 " + remaining + " 个）";
-    }
-  }
+  if (!hasEntry) return "所有信物数量均为 0 且未填写底薪，无法记入结账";
   return "";
 }
 function __inpaOrig_addSettlement(){
   var r = collectStl(); if(!r.staffId){ toast("请填写店员ID"); return; }
   var inputError = settlementInputError(r);
   if(inputError){ toast(inputError); return; }
-  var dupBase = state.settlements.some(function(x){ return x.staffId === r.staffId && (+x.base||0) > 0; });
+  var dupBase = state.settlements.some(function(x){ return !INPACore.isInactiveRecord(x) && x.staffId === r.staffId && (+x.base||0) > 0; });
   if(dupBase && (+r.base||0) > 0){
     toast("【"+r.staffId+"】本场已有底薪记录（底薪每场仅一次），无法重复录入");
     return;
@@ -5520,15 +5532,12 @@ function __inpaOrig_addSettlement(){
   }
   r.ts = nowStr(); r.id = state.seqStl++;
   INPACore.snapshotSettlementRecord(r, INPACore.CONFIG);
-  var dup = state.settlements.some(function(x){ return x.staffId === r.staffId; });
   state.settlements.push(r); save();
   renderSettleTable(); renderReport(); renderStlCalc();
   $("#stlStaff").value=""; $("#stlNote").value="";
   ["#stlZhiming","#stlWaitdai","#stlBaojian","#stlGift","#stlChamp","#stlSpecial","#stlGiftx","#stlTip"].forEach(function(id){$(id).value=0;});
   $("#stlMult").value=String(+INPACore.CONFIG.rewardMultiplier || 1); $("#stlBase").value=String(+INPACore.CONFIG.baseSalary || 0);
   renderStlCalc();
-  if(dup) toast("【"+r.staffId+"】已追加到「结账记录」，并已合并到「结账明细 - 合并」");
-  else flash(document.querySelector("#tab-settle .btn"), "已记入 ✓");
 }
 function delStl(id){
   var record = state.settlements.filter(function(s){ return s.id===id; })[0];
@@ -5632,7 +5641,7 @@ function renderReport(){
       return '<div class="kv um-row inpa-over-row"><span>异常 · 超额回收 · '+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
     }).join("")) +
     '<div class="kv um-row um-total"><span>合计</span><span></span><b>'+money(rep.unsettledAmount)+'</b></div>' +
-    ((rep.overSettledDetail || []).length ? '<div class="muted" style="margin-top:6px;color:var(--fd-warn)">超额回收仅作为异常凭证展示，不抵扣未结算，也不参与损益计算。</div>' : '') +
+    ((rep.overSettledDetail || []).length ? '<div class="muted" style="margin-top:6px;color:var(--fd-warn)">超额回收金额仅作异常提示，不重复扣减毛利；额外数量支付的店员工资已计入店员工资成本。</div>' : '') +
     '<div class="muted" style="margin-top:8px">' +
       '未结算信物按【售价】预留（没收回的那部分利润不进当期损益，等交回后体现）。' +
       ' 前台工资 = ' + (um === "wage"
@@ -8453,7 +8462,7 @@ renderAll();
   }
   function mergedStaff(staff) {
     try {
-      var all = INPACore.computeAll((window.state && window.state.settlements) || [], INPACore.CONFIG);
+      var all = INPACore.computeAll((window.state && window.state.settlements) || [], INPACore.CONFIG, (window.state && window.state.sales) || []);
       var arr = all.merged || [];
       for (var i = 0; i < arr.length; i++) if (arr[i].staffId === staff) return arr[i];
     } catch (e) { }
@@ -8482,7 +8491,7 @@ renderAll();
     if (!r.staffId) { toast("请填写店员ID"); var el0 = q("#stlStaff"); if (el0) el0.focus(); return; }
     var inputError = settlementInputError(r);
     if (inputError) { toast(inputError); return; }
-    var dupBase = state.settlements.some(function (x) { return x.staffId === r.staffId && (+x.base || 0) > 0; });
+    var dupBase = state.settlements.some(function (x) { return !INPACore.isInactiveRecord(x) && x.staffId === r.staffId && (+x.base || 0) > 0; });
     if (dupBase && (+r.base || 0) > 0) {
       toast("【" + r.staffId + "】本场已有底薪记录（底薪每场仅一次）。手动结账请把「底薪」改成 0 再记。");
       return;
@@ -8504,7 +8513,6 @@ renderAll();
     var b2 = q("#stlBase"); if (b2) b2.value = String(+INPACore.CONFIG.baseSalary || 0);
     renderStlCalc();
     try { if (window.__inpaAfter_addSettlement) window.__inpaAfter_addSettlement(); } catch (e) { }
-    tst("已记入「" + r.staffId + "」手动结账 " + money(INPACore.computeSettlement(r, INPACore.CONFIG).Q) + " 万（数量照常进库存勾稽，付款不参与交易）");
   }
   window.manualSettle = manualSettle;
 
