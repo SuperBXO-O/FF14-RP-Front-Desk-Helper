@@ -59,6 +59,24 @@ Browsingway displays the web page inside the game. INPA Bridge provides target r
 
 ### Create a Browsingway inlay
 
+INPA Bridge does not bundle the front desk web page. Download `public/index.html` from this repository and place it in the current INPA Bridge plugin directory:
+
+```text
+%APPDATA%\XIVLauncher\installedPlugins\INPABridge\<version>\index.html
+```
+
+For portable XIVLauncher installations, replace `%APPDATA%\XIVLauncher` with the launcher's data directory. The page file must be named `index.html` or `app.html`.
+
+Alternatively, place the page in a stable folder outside the plugin version directory and create a `page.txt` file beside the INPA Bridge DLL. Enter the absolute path to the page file or its containing folder:
+
+```text
+D:\path\to\FF14-RP-Front-Desk-Helper\public\index.html
+```
+
+INPA Bridge updates install into a new version directory. After an update, place `index.html` in the new plugin directory again or recreate `page.txt`.
+
+Before configuring Browsingway, open `http://127.0.0.1:18500` in a local browser and confirm that the front desk page appears.
+
 Open Browsingway with `/bw` or from the Dalamud plugin settings, then create a new inlay:
 
 - **Name**: `ff14rpfrontdeskhelper`
