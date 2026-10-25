@@ -58,7 +58,7 @@ For a Git-connected Cloudflare Worker, use:
 
 - Build command: leave empty
 - Deploy command: `npx --yes wrangler@4.152.0 deploy`
-- Preview command: `npx --yes wrangler@4.152.0 dev`
+- Preview command: `npx --yes wrangler@4.152.0 preview`
 
 ## Data and privacy
 
