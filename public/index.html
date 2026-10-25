@@ -437,7 +437,7 @@
     border-radius:0!important;
     clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%)!important
   }
-  #tkWhiteTarget::before,#inpaAddSaleBtn::before,.inpa-target-btn::before,
+  #inpaAddSaleBtn::before,.inpa-target-btn::before,
   #inpaAutoSettleBtn::before,#inpaManualSettleBtn::before{
     content:'';width:5px;height:5px;background:currentColor;flex:0 0 auto
   }
@@ -3747,7 +3747,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       </div>
       <div class="card tk-fixed">
         <h3 class="tk-head"><span data-tip="添加进白名单的对象，密聊不提工单；白名单不会随「开始新场次」而清除">工单白名单</span> <span class="muted" id="tkWhiteCount"></span>
-          <button type="button" class="btn mini ghost tk-clear" id="tkWhiteTarget" data-tk="whiteTarget">取目标</button>
+          <button type="button" class="btn mini inpa-target-btn inpa-target-inline tk-white-target" id="tkWhiteTarget" data-tk="whiteTarget" aria-label="选取游戏内当前目标" data-tip="选取游戏内当前目标" data-tip-orig="选取游戏内当前目标"></button>
           <button type="button" class="btn mini ghost tk-clear" data-tk="clearWhite"><b>Clear</b></button></h3>
         <div id="tkWhite" class="tk-list"><div class="tk-empty">白名单还是空的：点「取目标」或在忽略清单里点「白名单」</div></div>
       </div>
@@ -6933,23 +6933,38 @@ renderAll();
 
   /* ================= 取目标 ================= */
   function takeTarget(sel) {
-    if (busy) return;
     var input = q(sel); if (!input) return;
+    requestTarget({ input: input });
+  }
+
+  function requestTarget(options) {
+    options = options || {};
+    if (busy) return;
+    var input = options.input || null;
+    var button = options.button || null;
     if (!online) { tst("游戏未连接：请先启用 INPA Bridge 插件"); return; }
     busy = true;
-    var old = input.style.borderColor;
-    input.style.borderColor = "#d4af37";
+    var old = input ? input.style.borderColor : "";
+    if (input) input.style.borderColor = "#d4af37";
+    if (button) button.disabled = true;
     req("GET", "/target").then(function (d) {
       if (d && d.ok && d.full) {
-        input.value = d.full;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        input.dispatchEvent(new Event("change", { bubbles: true }));
-        tst("已取目标：" + d.full);
+        if (options.onTarget) options.onTarget(d.full);
+        else if (input) {
+          input.value = d.full;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          tst("已取目标：" + d.full);
+        }
       } else {
         tst(d && d.reason === "no-target" ? "游戏里没有选中目标，请先点选一名玩家" : "取目标失败");
       }
     }).catch(function (e) { tst("取目标失败：" + e.message); })
-      .then(function () { busy = false; input.style.borderColor = old; });
+      .then(function () {
+        busy = false;
+        if (input) input.style.borderColor = old;
+        if (button) button.disabled = false;
+      });
   }
 
   function makeTargetBtn(sel) {
@@ -6991,8 +7006,20 @@ renderAll();
     }
   }
 
+  function prepareWhiteTargetBtn() {
+    var button = q("#tkWhiteTarget");
+    if (!button || button.dataset.inpaReady) return;
+    button.dataset.inpaReady = "1";
+    button.innerHTML = inpaUiIcon("target");
+    button.className = "btn mini inpa-target-btn inpa-target-inline tk-white-target";
+    button.setAttribute("aria-label", "选取游戏内当前目标");
+    button.setAttribute("data-tip", "选取游戏内当前目标");
+    button.setAttribute("data-tip-orig", "选取游戏内当前目标");
+  }
+
   function injectTargetButtons() {
     ["#posBuyer", "#resvBuyer", "#resvStaff", "#ruStaff", "#stlStaff", "#rId", "#cfgDjStaff"].forEach(makeTargetBtn);
+    prepareWhiteTargetBtn();
     refreshOfflineButtons();
   }
 
@@ -10748,13 +10775,10 @@ function installStaffSuggest() {
   }
   /* 白名单的「取目标」：把游戏里当前选中的目标加进来 */
   function tkWhiteTakeTarget(btn) {
-    if (!online) { tst("游戏未连接：请先在游戏内启用 INPA Bridge 插件"); return; }
-    if (btn) btn.disabled = true;
-    req("GET", "/target").then(function (d) {
-      if (d && d.ok && d.full) tkWhiteAdd(d.full);
-      else tst(d && d.reason === "no-target" ? "游戏里没有选中目标，请先点选一名玩家" : "取目标失败");
-    }).catch(function (e) { tst("取目标失败：" + e.message); })
-      .then(function () { if (btn) btn.disabled = false; });
+    requestTarget({
+      button: btn,
+      onTarget: function (full) { tkWhiteAdd(full); }
+    });
   }
   function tkClearWhite() {
     var n = tkWhiteList().length;
