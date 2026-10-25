@@ -2,7 +2,7 @@
 
 An open-source, browser-based front desk and bookkeeping tool for Final Fantasy XIV role-play venues.
 
-The app runs as a single static `index.html` file. It works offline using browser storage, and can connect to the separately distributed [INPA Bridge](https://github.com/SuperBXO-O/INPABridge) plugin through `127.0.0.1:18500` for in-game integration.
+The app runs as a single static `public/index.html` file. It works offline using browser storage, and can connect to the separately distributed [INPA Bridge](https://github.com/SuperBXO-O/INPABridge) plugin through `127.0.0.1:18500` for in-game integration.
 
 This project is not affiliated with or endorsed by Square Enix, Final Fantasy XIV, DeepSeek, or any third-party skill author. It does not include official game artwork, logos, fonts, screenshots, or text.
 
@@ -39,11 +39,26 @@ This project is not affiliated with or endorsed by Square Enix, Final Fantasy XI
 ## Deployment
 
 1. Download or clone this repository.
-2. Upload `index.html` to any static web host.
-3. Optional: connect the repository to Cloudflare Workers or another static deployment service.
+2. Upload `public/index.html` to any static web host, or deploy the repository with Wrangler.
+3. Connect the repository to Cloudflare Workers for automatic deployment, if desired.
 4. Optional: install `INPA Bridge` separately and connect the page to the local plugin.
 
 No build step or third-party npm packages are required to host the app.
+
+### Cloudflare Workers
+
+The repository includes an assets-only [Wrangler configuration](wrangler.jsonc) targeting the existing `ff14rpfrontdeskhelper` Worker.
+
+```bash
+npx --yes wrangler@4.152.0 dev
+npx --yes wrangler@4.152.0 deploy
+```
+
+For a Git-connected Cloudflare Worker, use:
+
+- Build command: leave empty
+- Deploy command: `npx --yes wrangler@4.152.0 deploy`
+- Preview command: `npx --yes wrangler@4.152.0 dev`
 
 ## Data and privacy
 
