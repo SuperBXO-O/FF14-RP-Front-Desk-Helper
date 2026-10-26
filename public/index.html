@@ -3926,7 +3926,166 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
 <script id="inpaGenericSkinBoot">
 (function(){try{if(localStorage.getItem("inpa_generic_skin_v1")==="cyber")
   document.documentElement.setAttribute("data-fd-skin","cyber");}catch(e){}})();
-</script></head>
+</script>
+<!-- INPA_CURSOR_SYSTEM_CSS_START -->
+<style id="inpaCursorSystemStyle">
+  /* inpaCursorNativeOverlayGuard */
+  html.inpa-custom-cursor,
+  html.inpa-custom-cursor *{cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=") 0 0,none!important}
+  #inpaCursor{
+    --inpa-cursor-x:0px;
+    --inpa-cursor-y:0px;
+    position:fixed;
+    z-index:2147483646;
+    left:0;
+    top:0;
+    width:40px;
+    height:40px;
+    pointer-events:none;
+    opacity:0;
+    visibility:hidden;
+    transform:translate3d(
+      calc(var(--inpa-cursor-x) - 7px),
+      calc(var(--inpa-cursor-y) - 4px),
+      0
+    );
+    color:var(--fd-ink);
+    filter:none;
+    transition:none;
+    contain:layout style paint;
+  }
+  #inpaCursor[data-visible="true"]{opacity:1;visibility:visible}
+  #inpaCursor[data-state="text"],
+  #inpaCursor[data-state="precise"],
+  #inpaCursor[data-state="move"],
+  #inpaCursor[data-state="resize-y"],
+  #inpaCursor[data-state="resize-x"],
+  #inpaCursor[data-state="resize-xy"],
+  #inpaCursor[data-state="busy"],
+  #inpaCursor[data-state="disabled"]{
+    transform:translate3d(
+      calc(var(--inpa-cursor-x) - 20px),
+      calc(var(--inpa-cursor-y) - 20px),
+      0
+    );
+  }
+  #inpaCursor .inpa-cursor-svg{display:block;width:40px;height:40px;overflow:visible}
+  #inpaCursor [data-cursor-visual]{display:none}
+  #inpaCursor[data-state="default"] [data-cursor-visual="default"],
+  #inpaCursor[data-state="hover"] [data-cursor-visual="hover"],
+  #inpaCursor[data-state="text"] [data-cursor-visual="text"],
+  #inpaCursor[data-state="precise"] [data-cursor-visual="precise"],
+  #inpaCursor[data-state="move"] [data-cursor-visual="move"],
+  #inpaCursor[data-state="resize-y"] [data-cursor-visual="resize-y"],
+  #inpaCursor[data-state="resize-x"] [data-cursor-visual="resize-x"],
+  #inpaCursor[data-state="resize-xy"] [data-cursor-visual="resize-xy"],
+  #inpaCursor[data-state="busy"] [data-cursor-visual="busy"],
+  #inpaCursor[data-state="disabled"] [data-cursor-visual="disabled"]{display:block}
+  /* inpaCursorSoftHollow */
+  #inpaCursor [data-cursor-visual]{
+    color:var(--fd-ink);
+    filter:
+      drop-shadow(0 0 2px color-mix(in srgb,currentColor 52%,transparent))
+      drop-shadow(0 0 7px color-mix(in srgb,currentColor 22%,transparent));
+  }
+  /* inpaCursorContrastHalo / inpaCursorDualGlow */
+  #inpaCursor[data-state="default"] [data-cursor-visual="default"],
+  #inpaCursor[data-state="hover"] [data-cursor-visual="hover"]{
+    color:var(--fd-paper);
+    filter:
+      drop-shadow(0 0 1.5px color-mix(in srgb,var(--fd-ink) 78%,transparent))
+      drop-shadow(0 0 5px color-mix(in srgb,var(--fd-ink) 42%,transparent))
+      drop-shadow(0 0 2px color-mix(in srgb,var(--fd-paper) 82%,transparent))
+      drop-shadow(0 0 9px color-mix(in srgb,var(--fd-paper) 44%,transparent));
+  }
+  #inpaCursor[data-state="busy"] [data-cursor-visual="busy"]{
+    color:var(--fd-paper);
+    filter:
+      drop-shadow(0 0 1.5px color-mix(in srgb,var(--fd-signal) 76%,transparent))
+      drop-shadow(0 0 5px color-mix(in srgb,var(--fd-signal) 40%,transparent))
+      drop-shadow(0 0 2px color-mix(in srgb,var(--fd-paper) 82%,transparent))
+      drop-shadow(0 0 9px color-mix(in srgb,var(--fd-paper) 44%,transparent));
+  }
+  /* inpaCursorTooltipOffset */
+  #inpaCursor .ic-busy-core{
+    fill:var(--fd-ink);
+    stroke:none;
+  }
+  #inpaCursor .ic-fill{
+    fill:none;
+    stroke:var(--fd-ink);
+    stroke-width:1.5px;
+    stroke-linecap:square;
+    stroke-linejoin:miter;
+    vector-effect:non-scaling-stroke;
+  }
+  #inpaCursor .ic-accent{
+    fill:none;
+    stroke:var(--fd-signal);
+    stroke-width:1.5px;
+    stroke-linecap:square;
+    stroke-linejoin:miter;
+    vector-effect:non-scaling-stroke;
+  }
+  /* inpaCursorRefine */
+  #inpaCursor .ic-pointer-edge{
+    stroke-width:5.2px!important;
+    clip-path:url(#inpaCursorArrowClip);
+  }
+  #inpaCursor .ic-center-solid{
+    fill:var(--fd-ink);
+    stroke:none;
+  }
+  #inpaCursor .ic-accent-shadow{
+    fill:#090909;
+    stroke:none;
+  }
+  #inpaCursor .ic-accent-solid{
+    fill:var(--fd-signal);
+    stroke:none;
+  }
+  /* inpaCursorFinalPolish */
+  #inpaCursor .ic-precise-core{
+    stroke:var(--fd-ink);
+    stroke-width:1.2px;
+    filter:
+      drop-shadow(0 0 1px var(--fd-ink))
+      drop-shadow(0 0 4px color-mix(in srgb,var(--fd-ink) 62%,transparent));
+  }
+  #inpaCursor .ic-text-line{stroke-width:1.35px!important}
+  #inpaCursor .ic-text-dash{stroke-width:.75px!important}
+
+  #inpaCursor .ic-line{
+    fill:none;
+    stroke:var(--fd-ink);
+    stroke-width:2px;
+    stroke-linecap:square;
+    stroke-linejoin:miter;
+    vector-effect:non-scaling-stroke;
+  }
+  #inpaCursor .ic-line-thin{stroke-width:1.15px}
+  #inpaCursor .ic-line-accent{
+    fill:none;
+    stroke:var(--fd-signal);
+    stroke-width:2.4px;
+    stroke-linecap:square;
+  }
+  #inpaCursor .ic-muted{stroke:var(--fd-muted)}
+  #inpaCursor .ic-dash{stroke-dasharray:4 5}
+  #inpaCursor .ic-hatch{fill:url(#inpaCursorHatch);stroke:var(--fd-muted);stroke-width:1.4px}
+  #inpaCursor .ic-busy-ring{
+    transform-box:fill-box;
+    transform-origin:center;
+    animation:inpaCursorSpin .8s steps(8,end) infinite;
+  }
+  @keyframes inpaCursorSpin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){
+    #inpaCursor{transition:none}
+    #inpaCursor .ic-busy-ring{animation:none}
+  }
+</style>
+<!-- INPA_CURSOR_SYSTEM_CSS_END -->
+</head>
 <body class="inpa-boot-active"><div id="inpaSkinFx" aria-hidden="true"></div>
 <div id="inpaSkinDock">
   <button id="inpaSkinToggle" type="button" aria-label="切换界面皮肤" aria-pressed="false">
@@ -12598,9 +12757,16 @@ function installStaffSuggest() {
         tipPath.setAttribute("d", "M7 8 L36 " + Math.max(24, tipH - 3) + " H" + tipW);
       }
       var vw = window.innerWidth || 800, vh = window.innerHeight || 600;
-      var left = Math.max(4, Math.min(e.clientX + 10, vw - tipW - 6));
-      var top = (e.clientY + tipH + 12 <= vh) ? (e.clientY + 10) : (e.clientY - tipH - 10);
-      el.style.left = left + "px";
+      var putRight = e.clientX + 27 + tipW <= vw - 6;
+      var putBelow = e.clientY + 12 + tipH <= vh - 6;
+      var gapX = putRight ? 27 : 5;
+      var gapY = putBelow ? 12 : 4;
+      var left = putRight ? e.clientX + gapX : e.clientX - tipW - gapX;
+      var top = putBelow ? e.clientY + gapY : e.clientY - tipH - gapY;
+      tipSvg.style.transform =
+        (putRight ? "" : "scaleX(-1) ") +
+        (putBelow ? "" : "scaleY(-1)");
+      el.style.left = Math.max(4, Math.min(left, vw - tipW - 6)) + "px";
       el.style.top = Math.max(4, Math.min(top, vh - tipH - 6)) + "px";
     }
     document.addEventListener("mousemove", update, true);
@@ -13477,11 +13643,10 @@ function installStaffSuggest() {
       var contentTop = 14;
       var lineY = contentTop + textHeight + 5;
       var height = lineY + 20;
-      var sideGap = 12;
-      var canRight = x + sideGap + width <= vw - 8;
-      var canLeft = x - sideGap - width >= 8;
-      var canBelow = y + height + 8 <= vh - 8;
-      var canAbove = y - height - 8 >= 8;
+      var canRight = x + 27 + width <= vw - 8;
+      var canLeft = x - 5 - width >= 8;
+      var canBelow = y + height + 12 <= vh - 8;
+      var canAbove = y - height - 4 >= 8;
       var choices = [
         { right: true, below: true, fits: canRight && canBelow },
         { right: true, below: false, fits: canRight && canAbove },
@@ -13496,11 +13661,13 @@ function installStaffSuggest() {
         };
       }
       var placeRight = choice.right;
+      var below = choice.below;
+      var sideGap = placeRight ? 27 : 5;
+      var verticalGap = below ? 12 : 4;
       var dotX = placeRight ? 4 : width - 4;
       var junctionX = placeRight ? 58 : width - 58;
       var left = placeRight ? x + sideGap : x - width - sideGap;
-      var below = choice.below;
-      var top = below ? y + 8 : y - height - 8;
+      var top = below ? y + verticalGap : y - height - verticalGap;
       var dotY = below ? 4 : height - 4;
       var minGuideLength = (parseFloat(getComputedStyle(text).fontSize) || 11.5) * 4;
       var alignedLineEnd = placeRight ? width - 20 : 20;
@@ -14739,5 +14906,154 @@ function installStaffSuggest() {
   });
   applySkin(readStoredSkin(), false, false);
 })();
-</script></body>
+</script>
+<!-- INPA_CURSOR_SYSTEM_JS_START -->
+<script id="inpaCursorSystemScript">
+(function () {
+  "use strict";
+  if (window.__inpaCursorSystemReady) return;
+  window.__inpaCursorSystemReady = true;
+
+  var fine = window.matchMedia("(pointer:fine) and (hover:hover)");
+  var coarse = window.matchMedia("(pointer:coarse)");
+  var root = null;
+  var state = "default";
+  var enabled = false;
+  var lastX = 0;
+  var lastY = 0;
+  var frame = 0;
+
+  function markup() {
+    return '<svg class="inpa-cursor-svg" viewBox="0 0 90 90" aria-hidden="true" focusable="false">' +
+      '<defs><pattern id="inpaCursorHatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" stroke-width="1.2"></line></pattern><clipPath id="inpaCursorArrowClip" clipPathUnits="userSpaceOnUse"><path d="M15 8L67 38L45 45L36 70Z"></path></clipPath></defs>' +
+      '<g data-cursor-visual="default"><path class="ic-fill ic-pointer-edge" d="M15 8L67 38L45 45L36 70Z"></path></g>' +
+      '<g data-cursor-visual="hover"><path class="ic-fill ic-pointer-edge" d="M15 8L67 38L45 45L36 70Z"></path><rect class="ic-accent-shadow" x="67" y="12" width="14" height="14"></rect><rect class="ic-accent-solid" x="63" y="8" width="14" height="14"></rect></g>' +
+      '<g data-cursor-visual="text" transform="translate(4.5 4.5) scale(.9)"><path class="ic-line ic-text-line" d="M31 13H59M31 66H59M45 20V59"></path><path class="ic-line ic-line-thin ic-dash ic-text-dash" d="M36 20V31M54 20V31M36 48V59M54 48V59"></path></g>' +
+      '<g data-cursor-visual="precise"><path class="ic-line precision-line" d="M45 19V37"></path><path class="ic-line precision-line" d="M45 53V71"></path><path class="ic-line precision-line" d="M19 45H37"></path><path class="ic-line precision-line" d="M53 45H71"></path><rect class="ic-accent-solid ic-precise-core" x="40" y="40" width="10" height="10"></rect></g>' +
+      '<g data-cursor-visual="move"><rect class="ic-center-solid" x="41" y="41" width="8" height="8"></rect><path class="ic-fill cursor-triangle" transform="translate(0 6)" d="M45 5L56 21H34Z"></path><path class="ic-fill cursor-triangle" transform="translate(0 -6)" d="M45 85L34 69H56Z"></path><path class="ic-fill cursor-triangle" transform="translate(6 0)" d="M5 45L21 34V56Z"></path><path class="ic-fill cursor-triangle" transform="translate(-6 0)" d="M85 45L69 34V56Z"></path></g>' +
+      '<g data-cursor-visual="resize-y"><rect class="ic-center-solid" x="41" y="41" width="8" height="8"></rect><path class="ic-fill cursor-triangle" transform="translate(0 8.56)" d="M45 8L57 25H33Z"></path><path class="ic-fill cursor-triangle" transform="translate(0 -8.56)" d="M45 82L33 65H57Z"></path></g>' +
+      '<g data-cursor-visual="resize-x"><rect class="ic-center-solid" x="41" y="41" width="8" height="8"></rect><path class="ic-fill cursor-triangle" transform="translate(8.56 0)" d="M8 45L25 33V57Z"></path><path class="ic-fill cursor-triangle" transform="translate(-8.56 0)" d="M82 45L65 33V57Z"></path></g>' +
+      '<g data-cursor-visual="resize-xy"><rect class="ic-center-solid" x="41" y="41" width="8" height="8"></rect><path class="ic-fill cursor-triangle" transform="translate(11.44 11.44)" d="M12 12L33 17L17 33Z"></path><path class="ic-fill cursor-triangle" transform="translate(-11.44 -11.44)" d="M78 78L57 73L73 57Z"></path></g>' +
+      '<g data-cursor-visual="busy"><circle class="ic-line-accent ic-busy-ring" cx="45" cy="45" r="26" pathLength="100" stroke-dasharray="17 7 4 7"></circle><rect class="ic-busy-core" x="40" y="40" width="10" height="10"></rect></g>' +
+      '<g data-cursor-visual="disabled"><circle class="ic-hatch" cx="45" cy="38" r="26"></circle><path class="ic-line ic-muted" d="M27 20L63 56M63 20L27 56"></path></g>' +
+      '</svg>';
+  }
+
+  function stateFor(target, event) {
+    if (!target || !target.closest) return "default";
+    var explicit = target.closest("[data-cursor]");
+    if (explicit) {
+      var wanted = String(explicit.getAttribute("data-cursor") || "").trim();
+      if (/^(default|hover|text|precise|move|resize-y|resize-x|resize-xy|busy|disabled)$/.test(wanted)) {
+        return wanted;
+      }
+    }
+    if (target.closest('[aria-busy="true"],.inpa-busy')) return "busy";
+    if (target.closest("#inpaBootSquare")) {
+      return target.closest("#inpaBootSquare").classList.contains("ib-ready")
+        ? "hover" : "default";
+    }
+    if (target.closest(':disabled,[aria-disabled="true"]')) return "disabled";
+    var resizableField = target.closest("textarea");
+    if (resizableField && event) {
+      var fieldRect = resizableField.getBoundingClientRect();
+      var resizeMode = getComputedStyle(resizableField).resize;
+      var nearRight = event.clientX >= fieldRect.right - 14;
+      var nearBottom = event.clientY >= fieldRect.bottom - 14;
+      /* inpaCursorResizeEdge */
+      if (resizeMode !== "none" && nearRight && nearBottom) {
+        return resizeMode === "both" ? "resize-xy" :
+          resizeMode === "horizontal" ? "resize-x" : "resize-y";
+      }
+    }
+    if (target.closest('textarea,[contenteditable="true"],input:not([type]),input[type="text"],input[type="search"],input[type="number"],input[type="date"],input[type="datetime-local"],input[type="time"],input[type="url"],input[type="email"],input[type="password"]')) return "text";
+    if (target.closest('button,a[href],summary,label[for],select,[role="button"],[onclick],[data-tip],[title],.inpa-target-btn,.inpa-icon-btn,.pill,input[type="checkbox"],input[type="radio"],input[type="range"],input[type="color"],input[type="file"],input[type="button"],input[type="submit"]')) return "hover";
+    /* inpaCursorStatePriority */
+    if (target.closest('[draggable="true"],.roster-item,.tk-chat-head')) return "move";
+    if (target.closest('canvas,[data-cursor="precise"]')) return "precise";
+    return "default";
+  }
+
+  function setVisible(visible) {
+    if (!root) return;
+    root.dataset.visible = visible ? "true" : "false";
+  }
+
+  function applyState(next) {
+    if (!root || state === next) return;
+    state = next;
+    root.dataset.state = next;
+  }
+
+  function paint() {
+    frame = 0;
+    if (!enabled || !root) return;
+    root.style.setProperty("--inpa-cursor-x", lastX + "px");
+    root.style.setProperty("--inpa-cursor-y", lastY + "px");
+  }
+
+  function onMove(event) {
+    if (!fine.matches) return;
+    if (!enabled) enable();
+    if (!root) return;
+    document.documentElement.classList.add("inpa-custom-cursor");
+    lastX = event.clientX;
+    lastY = event.clientY;
+    var next = stateFor(event.target, event);
+    applyState(next);
+    setVisible(true);
+    if (!frame) frame = window.requestAnimationFrame(paint);
+  }
+
+  function onDown() {
+    if (root) root.dataset.pressed = "true";
+  }
+
+  function onUp() {
+    if (root) root.dataset.pressed = "false";
+  }
+
+  function onLeave() {
+    setVisible(false);
+  }
+
+  function disable() {
+    enabled = false;
+    document.documentElement.classList.remove("inpa-custom-cursor");
+    if (root) root.dataset.visible = "false";
+  }
+
+  function enable() {
+    if (!fine.matches || enabled) return;
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "inpaCursor";
+      root.setAttribute("aria-hidden", "true");
+      root.dataset.state = "default";
+      root.dataset.pressed = "false";
+      root.dataset.visible = "false";
+      root.innerHTML = markup();
+      document.body.appendChild(root);
+    }
+    enabled = true;
+  }
+
+  document.addEventListener("pointermove", onMove, { passive: true });
+  document.addEventListener("pointerdown", onDown, { passive: true });
+  document.addEventListener("pointerup", onUp, { passive: true });
+  document.addEventListener("pointerleave", onLeave, { passive: true });
+  window.addEventListener("blur", onLeave);
+  if (fine.addEventListener) fine.addEventListener("change", function () {
+    if (fine.matches) enable();
+    else if (coarse.matches) disable();
+  });
+  if (coarse.addEventListener) coarse.addEventListener("change", function () {
+    if (coarse.matches && !fine.matches) disable();
+    else if (fine.matches) enable();
+  });
+  enable();
+})();
+</script>
+<!-- INPA_CURSOR_SYSTEM_JS_END -->
+</body>
 </html>
