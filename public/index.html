@@ -8288,9 +8288,11 @@ renderAll();
     var channelId = roomBroadcastChannelId();
     var command = "/" + channelId;
     var lines = ["【包间情况一览】"];
+    var compact = [];
     ((window.state && state.rooms) || []).forEach(function (room) {
       var no = String((room && room.no) || "").trim() || "未编号";
       var open = openRecOf(room && room.no);
+      compact.push(no + (open ? "使用" : "空"));
       var status = "空";
       if (open) {
         var staff = String(open.staff || "").trim();
@@ -8307,10 +8309,13 @@ renderAll();
       }
       lines.push("| " + no + " " + status);
     });
+    var compactMacro = compact.join(" ");
     return {
       channel: channelId,
-      lines: lines,
-      macro: lines.map(function (line) { return command + " " + line; }).join("\n")
+      lines: online ? lines : [compactMacro],
+      macro: online
+        ? lines.map(function (line) { return command + " " + line; }).join("\n")
+        : compactMacro
     };
   }
 
