@@ -14911,6 +14911,17 @@ function installStaffSuggest() {
 <script id="inpaCursorSystemScript">
 (function () {
   "use strict";
+  function isGameWindowHost() {
+    try { return /Browsingway\//i.test(navigator.userAgent || ""); }
+    catch (error) { return false; }
+  }
+  /* 游戏内 CEF 不能可靠隐藏 Windows 硬件指针。保留原生指针，
+     不启动自定义光标，避免两套指针同时出现。 */
+  if (isGameWindowHost()) {
+    window.__inpaCursorSystemDisabled = "browsingway";
+    return;
+  }
+  window.__inpaCursorSystemDisabled = "";
   if (window.__inpaCursorSystemReady) return;
   window.__inpaCursorSystemReady = true;
 
