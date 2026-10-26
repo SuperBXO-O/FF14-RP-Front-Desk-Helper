@@ -1,0 +1,83 @@
+name: 功能建议
+description: 描述实际工作问题和对通用功能的改进建议
+title: "[Feature]: "
+labels:
+  - enhancement
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        功能建议应先说明实际问题，而不是只指定实现方式。
+
+        本项目优先处理对多个使用者都成立的通用需求。私人定制、代部署和特定店铺专属流程默认不在范围内，接受建议也不代表承诺完成时间。
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue 和 README，没有找到相同建议。
+          required: true
+        - label: 这个需求描述的是通用工作问题，而不是只适用于我自己的店铺。
+          required: true
+        - label: 我知道建议被标记为已接受，不代表已有排期。
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 需要解决的问题
+      description: 现在哪个工作流程不顺？这个问题会影响谁？
+      placeholder: 在营业高峰时，我需要……但当前只能……，造成……
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 当前替代办法
+      description: 现在如何绕过这个问题？如果没有替代办法也请说明。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 问题出现频率
+      options:
+        - 每次营业都会出现
+        - 每周多次
+        - 偶尔出现
+        - 只在特殊场景出现
+        - 尚未实际使用
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 期望改善
+      description: 描述用户能完成什么，不必限定具体代码或界面实现。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的其他方案
+      description: 可选。列出已尝试的方案及其不足。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 范围与参与
+      options:
+        - label: 该建议可以在不包含官方游戏素材、客户数据或第三方付费资源的情况下实现。
+          required: true
+        - label: 我愿意在需要时补充使用场景、测试步骤或参与测试。
+          required: false
+        - label: 我愿意提交聚焦的 Pull Request。
+          required: false

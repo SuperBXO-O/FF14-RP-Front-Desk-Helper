@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用、部署与数据安全说明
+    url: https://github.com/SuperBXO-O/FF14-RP-Front-Desk-Helper/blob/main/SUPPORT.md
+    about: 提交问题前，请先查看支持范围、数据备份和排查步骤。
+  - name: INPA Bridge 插件问题
+    url: https://github.com/SuperBXO-O/INPABridge/issues
+    about: 交易、取目标、输入法覆盖层或插件安装问题请提交到插件仓库。
+  - name: 私密报告安全漏洞
+    url: https://github.com/SuperBXO-O/FF14-RP-Front-Desk-Helper/security/policy
+    about: 不要在公开 Issue 中披露漏洞细节、访问令牌或真实营业数据。

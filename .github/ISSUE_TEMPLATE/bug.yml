@@ -1,0 +1,141 @@
+name: Bug 报告
+description: 报告可以复现的网页错误、数据问题或交互异常
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请先在最新版本和未修改的原版页面上复现，并搜索已有 Issue。
+
+        **不要上传访问令牌、完整 localStorage、营业记录、客户名单或其他隐私数据。**
+        截图和录屏请遮挡角色名、客户名、金额和联系方式。
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，没有找到相同问题。
+          required: true
+        - label: 我使用的是最新版本或已说明具体版本。
+          required: true
+        - label: 我已移除截图、日志和附件中的隐私数据与访问令牌。
+          required: true
+        - label: 我知道 Issue 被接受不代表承诺修复时间。
+          required: true
+
+  - type: dropdown
+    id: edition
+    attributes:
+      label: 网页版本
+      options:
+        - 通用版
+        - INPA 版
+        - 普林斯顿版
+        - 自行修改版
+        - 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 网页版本或提交哈希
+      description: 填写 Release、提交哈希、下载日期或来源链接。
+      placeholder: 例如 569ff61、2026-10-27 下载的 public/index.html
+    validations:
+      required: true
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: INPA Bridge 版本
+      description: 普通浏览器离线使用时可以填写“未使用插件”。
+      placeholder: 例如 1.7.92.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: 运行环境
+      options:
+        - 普通浏览器（Edge / Chrome / Firefox）
+        - 游戏内 Browsingway / CEF
+        - 本机启动器
+        - 移动设备
+        - 不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: data_mode
+    attributes:
+      label: 页面显示的数据来源
+      options:
+        - 网页本地存储
+        - 本机文件
+        - 插件共用文件 / 网页档案
+        - 离线模式，数据来源不明
+        - 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器及系统
+      description: 例如 Edge 144 / Windows 11；Browsingway 用户请填写游戏内窗口。
+      placeholder: Edge 144 / Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从打开页面开始，按顺序写出可以重复操作的最短步骤。
+      placeholder: |
+        1. 打开……
+        2. 点击……
+        3. 输入……
+        4. 出现……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+      placeholder: 页面本应显示或保存什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果与错误信息
+      description: 请写出实际现象、发生时间、失败提示和控制台中与问题直接相关的错误。
+      placeholder: 实际出现的提示、空白、数据变化或控制台错误。
+    validations:
+      required: true
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: 截图、录屏或附件
+      description: 创建 Issue 后可直接拖入附件。请先遮住隐私信息，不要上传完整数据文件。
+      placeholder: 可附上已脱敏的截图、录屏或最小复现页面。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认内容不包含访问令牌、真实客户数据或可直接恢复的完整营业备份。
+          required: true

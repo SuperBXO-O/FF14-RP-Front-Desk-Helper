@@ -13,6 +13,22 @@ Before submitting:
 
 Constructive issues and focused pull requests are preferred.
 
+## Before opening an issue
+
+1. Search open and closed issues.
+2. Reproduce on the latest unmodified version.
+3. Use the Bug or Feature issue form; blank issues are disabled.
+4. Remove private data and credentials from every attachment.
+
+See [SUPPORT.md](SUPPORT.md) for supported environments and issue routing. Security vulnerabilities must be reported privately according to [SECURITY.md](SECURITY.md).
+
+## Pull requests
+
+- Keep each pull request focused on one behavior or maintenance concern.
+- Discuss large features, architecture changes and new dependencies in an Issue before implementing them.
+- Include reproduction and verification evidence in the pull-request template.
+- Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ## Automated checks
 
 Run the open-source presentation checks before submitting a pull request:

@@ -126,6 +126,18 @@ Once the page shows an online connection, target selection, trading, and shared 
 - Plugin mode stores data on the user's own computer.
 - Network access is only used for pages, plugin requests and optional calendar/music embeds already declared by the interface.
 
+## Support and feedback
+
+Use the repository's structured GitHub Issue forms for reproducible bugs and general feature proposals. Read [SUPPORT.md](SUPPORT.md) before posting.
+
+- Search existing Issues and reproduce on the latest unmodified version.
+- Remove access tokens, customer names, business records and complete data dumps from attachments.
+- Submit INPA Bridge, trading, target-selection and input-overlay problems to [INPABridge](https://github.com/SuperBXO-O/INPABridge/issues).
+- Report security vulnerabilities privately according to [SECURITY.md](SECURITY.md).
+- Private customization, managed deployment, data recovery and guaranteed delivery dates are outside the project's support scope.
+
+Accepted proposals do not imply a release schedule. Please follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) when participating.
+
 ## Design and AI disclosure
 
 The product was developed through an iterative human-directed design process with AI assistance. DeepSeek was used during product design, interface exploration, copy iteration and implementation support. Generated output was reviewed, edited and tested before being included.
