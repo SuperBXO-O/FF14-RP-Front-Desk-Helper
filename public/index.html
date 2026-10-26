@@ -176,8 +176,10 @@
   #unsettledDetail .um-row>*:first-child{text-align:left}   /* 业务内容这列靠左 */
   #unsettledDetail .um-head>*{color:var(--muted);font-weight:600;font-size:12px}
   #unsettledDetail .um-total>*{font-weight:600}
-  #unsettledDetail .inpa-over-row{color:var(--fd-warn)}
-  #unsettledDetail .inpa-over-row>*{border-top:1px dashed color-mix(in srgb,var(--fd-warn) 46%,transparent)}
+  #unsettledDetail .inpa-over-row,
+  #unsettledDetail .inpa-refund-row{color:var(--fd-signal)}
+  #unsettledDetail .inpa-over-row>*{border-top:1px dashed color-mix(in srgb,var(--fd-signal) 46%,transparent)}
+  #unsettledDetail .inpa-refund-row>*{border-top:1px solid color-mix(in srgb,var(--fd-signal) 30%,transparent)}
   #settleModePills .pill{font-size:12.5px;padding:6px 12px}
   /* ===== 阶段0：密聊工单 ===== */
   /* 工单面板整块定高、三个列表各自内部滚动：来多少工单，「② 自动计算」的高度都不变 */
@@ -4502,6 +4504,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   function reconciliationDetail(sales, settlements, cfg) {
     var settledByKey = aggregate(sales, settlements, cfg).settled;
     var groups = {}, order = [];
+    var refundGroups = {};
     (sales || []).forEach(function (sale) {
       if (isInactiveRecord(sale)) return;
       var computed = computeSale(sale);
@@ -4526,7 +4529,46 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
         });
       });
     });
-    var details = [], over = [];
+    (sales || []).forEach(function (sale) {
+      if (!sale || sale.status !== "refund") return;
+      var computed = computeSale(sale);
+      (computed.components || [computed]).forEach(function (part) {
+        if (!part.item || part.item.noToken) return;
+        var unitPrice = nonNegative(part.item.price);
+        part.lines.forEach(function (line) {
+          var count = nonNegative(line.units);
+          if (!line.key || count <= 0) return;
+          if (!refundGroups[line.key]) {
+            refundGroups[line.key] = {
+              key: line.key, biz: part.item.biz, unit: part.item.unit || "",
+              entries: []
+            };
+          }
+          refundGroups[line.key].entries.push({
+            count: count,
+            price: line.price !== undefined ? nonNegative(line.price) : unitPrice
+          });
+        });
+      });
+    });
+    var details = [], over = [], refunds = [];
+    function consumeRefund(key, excess) {
+      var group = refundGroups[key];
+      if (!group) return excess;
+      var remaining = nonNegative(excess);
+      group.entries.forEach(function (entry) {
+        if (remaining <= 0) return;
+        var count = Math.min(remaining, nonNegative(entry.count));
+        if (count <= 0) return;
+        refunds.push({
+          key: key, biz: group.biz, unit: group.unit, count: round2(count),
+          price: entry.price,
+          amount: entry.price > 0 ? round2(count * entry.price) : 0
+        });
+        remaining = round2(remaining - count);
+      });
+      return remaining;
+    }
     order.forEach(function (key) {
       var group = groups[key];
       var remainingSettled = nonNegative(settledByKey[key]);
@@ -4543,6 +4585,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
         }
       });
       var excess = Math.max(0, round2(nonNegative(settledByKey[key]) - group.sold));
+      excess = consumeRefund(key, excess);
       if (excess > 0) {
         var lastPrice = group.entries.length ? group.entries[group.entries.length - 1].price : 0;
         over.push({
@@ -4558,10 +4601,12 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       if (count <= 0) return;
       var it = itemByKey(key);
       if (!it || it.noToken) return;
+      count = consumeRefund(key, count);
+      if (count <= 0) return;
       var price = unsettledRate(it, cfg);
       over.push({ biz: it.biz, unit: it.unit || "", count: count, price: price, amount: round2(count * price) });
     });
-    return { details: details, over: over };
+    return { details: details, over: over, refunds: refunds };
   }
 
   function report(sales, settlements, cfg) {
@@ -4579,6 +4624,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     var reconciliation = reconciliationDetail(sales, settlements, cfg);
     var unsettledDetail = reconciliation.details;
     var overSettledDetail = reconciliation.over;
+    var refundRecoveryDetail = reconciliation.refunds;
     var unsettledAmount = round2(unsettledDetail.reduce(function (sum, row) { return sum + row.amount; }, 0));
     var overSettledAmount = round2(overSettledDetail.reduce(function (sum, row) { return sum + row.amount; }, 0));
 
@@ -4611,6 +4657,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
       frontProfitBase: frontProfitBase, frontUnits: soldUnits, frontIsBoss: frontIsBoss,
       unsettledAmount: unsettledAmount, unsettledDetail: unsettledDetail,
       overSettledAmount: overSettledAmount, overSettledDetail: overSettledDetail,
+      refundRecoveryDetail: refundRecoveryDetail,
       grossProfit: grossProfit, netProfit: netProfit
     };
   }
@@ -4750,6 +4797,7 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
     s4.push(["未结算金额", rep.unsettledAmount]);
     s4.push(["净利润", rep.netProfit]);
     rep.unsettledDetail.forEach(function (d) { s4.push(["  · " + d.biz + " 未结算", d.amount]); });
+    (rep.refundRecoveryDetail || []).forEach(function (d) { s4.push(["  · 退款 · 信物回收 · " + d.biz, d.amount]); });
     rep.overSettledDetail.forEach(function (d) { s4.push(["  · " + d.biz + " 超额回收", d.amount]); });
 
     // 出售记录-合并（按购买人）
@@ -6149,12 +6197,15 @@ function renderReport(){
     '<div class="kv um-row um-head"><span>业务内容</span><span>未结算 × 售价</span><span>金额w</span></div>' +
     (rep.unsettledDetail.length ? rep.unsettledDetail.map(function(d){
       return '<div class="kv um-row"><span>'+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
-    }).join("") : ((rep.overSettledDetail || []).length ? '' : '<div class="muted">暂无数据</div>')) +
+    }).join("") : (((rep.overSettledDetail || []).length || (rep.refundRecoveryDetail || []).length) ? '' : '<div class="muted">暂无数据</div>')) +
+    ((rep.refundRecoveryDetail || []).map(function(d){
+      return '<div class="kv um-row inpa-refund-row"><span>退款 · 信物回收 ·  '+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
+    }).join("")) +
     ((rep.overSettledDetail || []).map(function(d){
       return '<div class="kv um-row inpa-over-row"><span>异常 · 超额回收 · '+esc(d.biz)+'</span><span>'+d.count+' × '+d.price+'</span><b>'+money(d.amount)+'</b></div>';
     }).join("")) +
     '<div class="kv um-row um-total"><span>合计</span><span></span><b>'+money(rep.unsettledAmount)+'</b></div>' +
-    ((rep.overSettledDetail || []).length ? '<div class="muted" style="margin-top:6px;color:var(--fd-warn)">超额回收金额仅作异常提示，不重复扣减毛利；额外数量支付的店员工资已计入店员工资成本。</div>' : '') +
+    ((rep.overSettledDetail || []).length ? '<div class="muted" style="margin-top:6px;color:var(--fd-signal)">超额回收金额仅作异常提示，不重复扣减毛利；额外数量支付的店员工资已计入店员工资成本。</div>' : '') +
     '<div class="muted" style="margin-top:8px">' +
       '未结算信物按【售价】预留（没收回的那部分利润不进当期损益，等交回后体现）。' +
       ' 前台工资 = ' + (um === "wage"
