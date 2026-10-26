@@ -10112,21 +10112,28 @@ renderAll();
       return Promise.reject(new Error("找不到默认数据模板"));
     }
     var snapshot = migrate(makeState(), FRONTDESK_DEFAULTS);
+    var snapshotJson = JSON.stringify(snapshot);
+    function finishLocalReset(keepPending) {
+      writeLocal(snapshot);
+      if (keepPending) pendingWrite(dataRev, snapshotJson);
+      else pendingClear();
+      state = snapshot;
+      INPACore.setItems(snapshot.items);
+      applyCfg();
+      setTimeout(function () { location.reload(); }, 180);
+      return { ok: true, local: true, pending: !!keepPending };
+    }
     function finishReset() {
       try { sessionStorage.removeItem(sk("inpa_tk_chat_open")); } catch (e) { }
-      if (dataMode !== "server") {
-        writeLocal(snapshot);
-        pendingClear();
-        state = snapshot;
-        INPACore.setItems(snapshot.items);
-        applyCfg();
-        setTimeout(function () { location.reload(); }, 180);
-        return { ok: true };
+      /* dataMode 可能停留在 server，但插件已经断开。清空操作不能因此失效：
+         先清本地，再把空白快照留到下次连接时同步。 */
+      if (dataMode !== "server" || !online) {
+        return finishLocalReset(dataMode === "server");
       }
       return dataPut(dataRev, snapshot, true).then(function (r) {
-        if (!r || !r.ok) throw new Error((r && r.error) || "共用数据没有接受空白数据");
+        if (!r || !r.ok) return finishLocalReset(true);
         dataRev = +r.rev || 0;
-        lastPushedSnap = JSON.stringify(snapshot);
+        lastPushedSnap = snapshotJson;
         writeLocal(snapshot);
         pendingClear();
         dataPending = false;
@@ -10135,6 +10142,9 @@ renderAll();
         applyCfg();
         setTimeout(function () { location.reload(); }, 180);
         return { ok: true };
+      }).catch(function () {
+        setOnline(false);
+        return finishLocalReset(true);
       });
     }
     var clearTickets = online
