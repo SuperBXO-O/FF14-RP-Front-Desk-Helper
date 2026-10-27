@@ -140,7 +140,7 @@ Accepted proposals do not imply a release schedule. Please follow [CODE_OF_CONDU
 
 ## Design and AI disclosure
 
-The product was developed through an iterative human-directed design process with AI assistance. DeepSeek was used during product design, interface exploration, copy iteration and implementation support. Generated output was reviewed, edited and tested before being included.
+The product was developed through an iterative human-directed design process with AI assistance. DeepSeek V4.1 Flash 1017 was used during product design, interface exploration, copy iteration and implementation support. Generated output was reviewed, edited and tested before being included.
 
 See [DESIGN.md](DESIGN.md) for the design process and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for development references and upstream licenses.
 
