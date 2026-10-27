@@ -5484,9 +5484,11 @@ function applyAccountingRecordAction(context, id, action){
   var rec = (list || []).filter(function(item){ return +item.id === +id; })[0];
   if (!rec || INPACore.isInactiveRecord(rec)) return;
   var label = action === "refund" ? "退款" : "作废";
-  var confirmText = action === "refund"
-    ? "确认将这出售记录标记为退款？记录会保留，退款金额不计入营业收入。之后店员拿未退信物结账，会以「退款 · 信物回收」进入未结算记录。"
-    : "确认将这条记录标记为「作废」？记录会保留为凭证，但不再影响库存和损益。";
+  var confirmText = action === "void"
+    ? "确认将这条记录标记为「作废」？记录会保留为凭证，但不再影响库存和损益。"
+    : (context === "settlement"
+      ? "确认将这结账记录标记为退款？记录会保留；对应信物已退回店里，不会再次用于结账，该笔结账也不计入工资和损益。"
+      : "确认将这出售记录标记为退款？记录会保留，退款金额不计入营业收入。之后店员拿未退信物结账，会以「退款 · 信物回收」进入未结算记录。");
   inpaAsk(confirmText, function(){
     var stamp = nowStr();
     rec.status = action === "refund" ? "refund" : "void";
