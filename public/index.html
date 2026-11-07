@@ -4899,17 +4899,19 @@ html[data-fd-variant="generic"] #inpaBootEntry .ib-square.ib-ready{
   function quickReply(sale) {
     var c = computeSale(sale);
     if (!c.components.length) return "";
+    var parts = Array.isArray(sale.items) && sale.items.length ? sale.items : [sale];
     if (c.components.length === 1) {
       var only = c.components[0], onlyItem = only.item;
-      var onlyMode = normalizeBillingMode(onlyItem.billingMode, onlyItem);
+      var onlyPart = parts[0];
+      var onlyMode = normalizeBillingMode(onlyPart.billingMode || onlyItem.billingMode, onlyItem);
       if (onlyItem.kind === "count" && onlyMode === "count_unit") {
-        return onlyItem.biz + " ×" + (+sale.giftCount || 0) + "，需支付 " + fmt(c.price) + " 万，感谢惠顾！";
+        var quantity = onlyPart.giftCount !== undefined ? onlyPart.giftCount : sale.giftCount;
+        return onlyItem.biz + " ×" + (+quantity || 0) + "，需支付 " + fmt(c.price) + " 万，感谢惠顾！";
       }
       if (onlyItem.kind === "custom") {
         return onlyItem.biz + "金额需支付 " + fmt(c.price) + " 万，感谢惠顾！";
       }
     }
-    var parts = Array.isArray(sale.items) && sale.items.length ? sale.items : [sale];
     var needGuest = false, needStaff = false, needHours = false;
     var names = parts.map(function (part, index) {
       var component = c.components[index] || {};
@@ -9074,12 +9076,15 @@ renderAll();
   }
 
   function syncRemovedSettleInputs() {
-    var customGift = itemByKeySafe("giftx");
-    ["#stlGiftx", "#stlTip"].forEach(function(selector){
-      var input = q(selector);
+    /* 固定录入框同样跟随价目表；定制打赏随定制礼品一起显示。
+       仅清理未提交的录入值，历史结账凭证与快照保持原样。 */
+    STL_STATIC.concat([["#stlTip", "giftx"]]).forEach(function(field){
+      var input = q(field[0]);
       if(!input) return;
-      if(input.parentElement) input.parentElement.style.display = customGift ? "" : "none";
-      if(!customGift) input.value = 0;
+      var present = !!itemByKeySafe(field[1]);
+      if(input.parentElement) input.parentElement.style.display = present ? "" : "none";
+      input.disabled = !present;
+      if(!present) input.value = 0;
     });
   }
 
