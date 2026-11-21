@@ -5821,7 +5821,8 @@ function migrate(d, factoryCfg){
     if(d.cfg.frontdeskShare == null) d.cfg.frontdeskShare = 0;
     if(d.cfg.frontdeskId == null) d.cfg.frontdeskId = "";
   }
-  if(!d.rooms || !d.rooms.length || d.rooms.every(function(r){ return !r.name; })) d.rooms = defaultRooms();
+  // 已保存的房间可以只有编号，也可以是用户清空后的空数组。
+  if(!Array.isArray(d.rooms)) d.rooms = defaultRooms();
   if(!d.reservations) d.reservations = [];
   d.posDraft = normalizePosDraft(d.posDraft);
   if(!d.roomLog) d.roomLog = [];
@@ -7162,6 +7163,11 @@ function webProfileCode(){
   if (variant === "generic") return "generic";
   return "";
 }
+function pageIsLocal(){
+  var host = String(location.hostname || "").toLowerCase();
+  var loopback = host === "127.0.0.1" || host === "localhost" || host === "[::1]";
+  return loopback && (location.port === "18500" || !!window.__INPA_TOKEN || !!window.__INPA_PAGE_STAMP);
+}
 function webArchiveMode(){
   if (!webProfileCode()) return false;
   try {
@@ -7169,11 +7175,7 @@ function webArchiveMode(){
         window.INPASessionIO && typeof window.INPASessionIO.isServerData === "function" &&
         window.INPASessionIO.isServerData()) return false;
   } catch(e){ }
-  try {
-    var host = String(location.hostname || "").toLowerCase();
-    return location.protocol.indexOf("http") === 0 &&
-      host !== "127.0.0.1" && host !== "localhost" && host !== "::1";
-  } catch(e){ return false; }
+  return location.protocol.indexOf("http") === 0 && !pageIsLocal();
 }
 var WEB_ARCHIVE_DB = "inpa-session-archive-v1";
 var WEB_ARCHIVE_STORE = "sessions";
@@ -7948,12 +7950,6 @@ renderAll();
   /* 页面是不是「本机服务」发的（游戏内窗口 / 启动器 / 插件的 18500）？
      是 → 共用数据、导出这些用相对地址（就是发页面的那个服务）；
      不是（在线版托管在公网）→ 一律找本机插件。 */
-  function pageIsLocal() {
-    try {
-      var h = String(location.hostname || "").toLowerCase();
-      return (h === "127.0.0.1" || h === "localhost" || h === "::1");
-    } catch (e) { return true; }
-  }
   function localUrl(path) { return withToken(pageIsLocal() ? path : (BRIDGE + path)); }
 
   /* ================= 在线版：连接本机插件 =================
@@ -7993,15 +7989,6 @@ renderAll();
     };
     baseEl.addEventListener("input", savePair);
     tokEl.addEventListener("input", savePair);
-    /* 打开面板时先探一下插件在不在，省得用户猜是"没插件"还是"口令不对" */
-    (function probe() {
-      var b = String(baseEl.value || "").trim().replace(/\/+$/, "");
-      if (!b) return;
-      fetch(b + "/ping?_=" + Date.now())
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) { msg.textContent = (d && d.ok) ? ("已探测到插件：" + (d.name || "INPA Bridge") + " " + (d.version || "")) : "已连上地址，但对方不是 INPA Bridge 插件"; })
-        .catch(function () { msg.textContent = "没探测到插件：先确认游戏里已启用 INPA Bridge（或换个地址）。"; });
-    })();
     var go = function () {
       var base = String(baseEl.value || "").trim().replace(/\/+$/, "");
       var tok = String(tokEl.value || "").trim();
@@ -8027,6 +8014,7 @@ renderAll();
           INPA_TOKEN = tok;
           BRIDGE = base;
           BRIDGE_BASES = [base];
+          pluginReachable = true;
           try {
             localStorage.setItem(sk("inpa_bridge_base"), base);
             localStorage.setItem(sk("inpa_token"), tok);
@@ -8038,7 +8026,7 @@ renderAll();
           msg.textContent = "连接没成功：" + (e && e.message ? e.message : e)
             + (isGameWindowHost()
               ? "\n游戏内浏览器可能禁止托管网页访问 127.0.0.1。请点「打开本机页面」；本机页面会自动注入口令。"
-              : "\n（地址和口令我已经记下了，页面会每 3 秒自动重试一次；也可以按 F5 让它重新读一次。）");
+              : "\n请确认 INPA Bridge 已启用，然后再点「连接」。");
         });
     };
     q("#inpaOnlineGo").onclick = go;
@@ -10111,6 +10099,7 @@ renderAll();
   function startWatcher() {
     if (watcherTimer) return;
     watcherTimer = setInterval(function () {
+      if (!online) return;
       req("GET", "/events?since=" + evtSince).then(function (d) {
         if (!d || !d.events) return;
         d.events.forEach(function (ev) { handleTradeEvent(ev); });
@@ -10613,6 +10602,8 @@ renderAll();
   /* 起动时：跟服务端对一次账 */
   var initBusy = false, initQueued = false;
   function initStorage() {
+    // 纯网页从浏览器存储启动。配对后先确认插件可达，再读取共用数据。
+    if (!pageIsLocal() && (!INPA_TOKEN || !pluginReachable)) { paintDataTag(); return; }
     /* 正在对账就别并发跑第二遍（自检 / 刚连上插件 / 连接按钮可能同时来），
        记下"还想再来一次"，等这轮结束再跑。 */
     if (initBusy) { initQueued = true; return; }
@@ -10623,12 +10614,6 @@ renderAll();
         }).catch(function () { setOnline(false); });
       }
       return;
-    }
-    /* 本地文件（file://）打开时的老规则是"纯本地、不碰共用数据"。
-       但"网页版 + 本机插件"这个用法也是 file://，所以现在改成：
-        插件通（在线模式）→ 照常连共用数据（口令在配对面板里填过就有）；插件不通 → 纯离线只存本地。 */
-    if (location.protocol.indexOf("http") !== 0) {
-      if (!online && !pluginReachable) { paintDataTag(); return; }
     }
     initBusy = true;
     var finish = function () {
@@ -10722,7 +10707,7 @@ renderAll();
   }, 2000);
   /* 查一次共用数据有没有变（每 3 秒跑一次；WebSocket 推来 "state" 时也会立刻跑一次） */
   function dataSyncNow() {
-    if (dataMode !== "server") return;
+    if (dataMode !== "server" || (!online && !pageIsLocal())) return;
     dataGet().then(function (d) {
       if (!d || !d.ok) return;
       if (d.data == null) { dataPending = true; paintDataTag(); return; }
@@ -10761,7 +10746,7 @@ renderAll();
       /* 先落“待确认快照”，再写 localStorage：即使正好在这两步之间断电，也不会丢掉这版改动。 */
       if (dataMode === "server" && snapNow != null && snapNow !== lastPushedSnap) pendingWrite(dataRev, snapNow);
       var r = orig.apply(this, arguments);
-      if (dataMode !== "server") return r;
+      if (dataMode !== "server" || (!online && !pageIsLocal())) return r;
       /* 内容没变就不推：页面打开时会顺手续存几次（迁移/补默认值/清理绑定），
          两个窗口都这样做就会互相把 rev 推高 → 对方看到"另一个窗口改了数据"→ 重载 → 又存… 死循环。 */
       if (snapNow != null && snapNow === lastPushedSnap) return r;
@@ -13021,7 +13006,9 @@ function installStaffSuggest() {
     try { showManualInReport(); } catch (e) { }
     installTooltips();   // 页面内提示框（游戏内 CEF 不显示原生 title）
 
-    ping(); setInterval(ping, 5000);
+    /* 本机插件页持续自检。已配对的网页启动时试连一次，之后仅在连接正常时自检。 */
+    if (pageIsLocal() || INPA_TOKEN) ping();
+    setInterval(function () { if (pageIsLocal() || online) ping(); }, 5000);
     checkRooms(); setInterval(checkRooms, 15000);
 
     console.log("[INPA] 扩展已加载 " + VERSION + " · 桥接 " + BRIDGE);
